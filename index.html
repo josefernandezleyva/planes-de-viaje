@@ -523,6 +523,38 @@ body.t-itinerario .lt{max-width:none}
 .kc-m .avs{margin-left:auto;display:flex;padding-left:4px}
 .kc-m .avs .av{margin-left:-5px;box-shadow:0 0 0 2px var(--kc)}
 .kc.done .kc-t{text-decoration:line-through;color:var(--label2)}
+.kc.nodone .kc-t{color:var(--label2)}
+.kc-m .br{padding:2px 8px;border-radius:999px;background:var(--green-t);color:var(--green-ink);font-weight:700}
+.kc-m .bx,.r-meta .bx{padding:2px 8px;border-radius:999px;background:var(--red-t);color:var(--red-ink);font-weight:700}
+.kc-chk{all:unset;flex:0 0 44px;display:grid;place-items:center;cursor:pointer;color:var(--label3);border-radius:0 15px 15px 0}
+.kc-chk svg,.chk svg{width:26px;height:26px}
+.kc-chk.r-SI,.chk.r-SI{color:var(--green)} .kc-chk.r-NO,.chk.r-NO{color:var(--red)}
+.kc-chk:focus-visible{outline:2px solid var(--blue);outline-offset:-4px}
+.kb.filtrado .kc-grip{visibility:hidden;pointer-events:none}
+.nodone .r-open,.chip.nodone .ct{color:var(--label2)}
+.segui{margin:6px 16px 4px;background:var(--bg2);border-radius:18px;padding:12px 12px 10px;display:grid;gap:9px}
+.sg-h{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.sg-t{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:15px}
+.sg-t svg{width:16px;height:16px;color:#fff;background:var(--green);border-radius:50%;padding:2px}
+.sg-r{font-size:13px;color:var(--label2)} .sg-r b{color:var(--label)}
+.sg-bar{display:flex;height:10px;border-radius:999px;overflow:hidden;background:var(--fill2);gap:2px}
+.sg-bar i{display:block;min-width:6px} .sg-bar .r{background:var(--green)} .sg-bar .x{background:var(--red)} .sg-bar .c{background:var(--blue)} .sg-bar .p{background:var(--orange)}
+.vfs{display:flex;flex-wrap:wrap;gap:6px}
+.vf{all:unset;flex:none;display:inline-flex;align-items:center;gap:6px;padding:6px 10px;border-radius:999px;background:var(--fill);font-size:13.5px;font-weight:600;cursor:pointer;white-space:nowrap}
+.vf b{font-weight:800;color:var(--label2)}
+.vf i{width:8px;height:8px;border-radius:50%;background:var(--label3)}
+.vf-decidir i{background:var(--orange)} .vf-confirmadas i{background:linear-gradient(90deg,var(--green) 50%,var(--blue) 50%)} .vf-realizar i{background:var(--blue)} .vf-realizadas i{background:var(--green)} .vf-norealizadas i{background:var(--red)} .vf-todas i{display:none}
+.vf.on{background:var(--label);color:var(--bg)} .vf.on b{color:var(--bg)}
+.vf:focus-visible{outline:2px solid var(--blue)}
+.linkbtn{all:unset;color:var(--blue);font-weight:600;cursor:pointer;text-decoration:underline}
+.seg3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.s3{all:unset;box-sizing:border-box;display:grid;justify-items:center;gap:4px;padding:10px 6px;border-radius:14px;background:var(--bg2);font-size:13.5px;font-weight:600;text-align:center;cursor:pointer;border:2px solid transparent}
+.s3 svg{width:24px;height:24px;color:var(--label3)}
+.s3.on.s3-p{border-color:var(--blue)} .s3.on.s3-p svg{color:var(--blue)}
+.s3.on.s3-SI{border-color:var(--green);background:var(--green-t)} .s3.on.s3-SI svg{color:var(--green)}
+.s3.on.s3-NO{border-color:var(--red);background:var(--red-t)} .s3.on.s3-NO svg{color:var(--red)}
+.s3:focus-visible{outline:2px solid var(--blue)}
+.c-unconf{background:var(--blue)}
 .kc.src{opacity:.3}
 .kc.ghost{position:fixed;z-index:60;pointer-events:none;box-shadow:0 18px 40px rgba(0,0,0,.28);transform:rotate(-2deg);outline:2px solid var(--blue);background:var(--bg2);margin:0}
 .kb-drop{height:4px;border-radius:2px;background:var(--blue);margin:-2px 6px;flex:none}
@@ -537,6 +569,8 @@ body.t-itinerario .lt{max-width:none}
 .kb-hint b{color:var(--label)}
 /* Teléfono horizontal: 3 días a la vez */
 @media (orientation:landscape) and (max-height:540px){
+  .segui{margin:2px 16px 4px;padding:6px 10px;grid-template-columns:auto 1fr;align-items:center;gap:6px 10px} .sg-h{display:none} .sg-bar{grid-column:1/-1;height:6px;order:2}
+  .vfs{grid-column:1/-1;flex-wrap:nowrap;overflow-x:auto;scrollbar-width:none} .vfs::-webkit-scrollbar{display:none} .vf{padding:4px 9px;font-size:12.5px}
   .kb{--n:3}
   body.t-itinerario .lt h1{display:none}
   body.t-itinerario .lt .eyebrow{display:none}
@@ -644,6 +678,14 @@ var NUCLEO = (function () {
   function delDia(st, fecha) {
     return st.items.filter(function (i) { return i.fecha === fecha; })
       .sort(function (a, b) { return (+a.orden || 0) - (+b.orden || 0); });
+  }
+  var RESULTADO_TXT = { SI: 'Realizada', NO: 'No se realizó', '': 'Por realizar' };
+  function resultado(v) {
+    if (v === true) return 'SI';
+    var t = txt(v).trim().toLowerCase();
+    if (!t || v === false) return '';
+    if (t === 'no' || t === 'no se realizó' || t === 'no se realizo' || t === 'no realizada' || t === 'false') return 'NO';
+    return esSi(v) || t === 'realizada' || t === 'hecha' ? 'SI' : '';
   }
   function etiquetaDia(v, f) {
     if (!v || !f) return corto(f);
@@ -754,10 +796,14 @@ var NUCLEO = (function () {
         if (!ESTADO_TXT[nuevo]) return { ok: false, error: 'Estado desconocido' };
         if (it.estado === nuevo) return { ok: true, sinCambios: true, item: it };
         var prev = it.estado; it.estado = nuevo; tocar(it);
-        var verbo = { confirmed: 'confirmó', discarded: 'descartó', archived: 'archivó', pending: 'restauró' }[nuevo];
-        var extra = nuevo === 'discarded' ? '. Bajó al final del ' + corto(it.fecha) : nuevo === 'archived' ? '. Ya no aparece en la agenda' : nuevo === 'pending' ? ' y quedó por decidir' : '';
+        // El resultado (realizada / no realizada) solo tiene sentido en una actividad confirmada
+        if (nuevo !== 'confirmed') it.hecho = '';
+        var descon = prev === 'confirmed' && nuevo === 'pending';
+        var verbo = descon ? 'desconfirmó' : { confirmed: 'confirmó', discarded: 'descartó', archived: 'archivó', pending: 'restauró' }[nuevo];
+        var extra = nuevo === 'discarded' ? '. Bajó al final del ' + corto(it.fecha) : nuevo === 'archived' ? '. Ya no aparece en la agenda' : descon ? ' y volvió a por decidir' : nuevo === 'pending' ? ' y quedó por decidir' : '';
         log(verbo, it, ESTADO_TXT[prev] + ' → ' + ESTADO_TXT[nuevo], nuevo === 'archived' ? 'archivo' : 'estado', actor + ' ' + verbo + ' ' + Q + it.titulo + C + extra);
-        if (nuevo === 'pending') { st.votos = st.votos.filter(function (v) { return v.item !== it.id; }); votar(it.id, 'si', true); }
+        // Desconfirmar borra los votos para decidir de nuevo; restaurar cuenta el sí de quien restaura
+        if (nuevo === 'pending') { st.votos = st.votos.filter(function (v) { return v.item !== it.id; }); if (!descon) votar(it.id, 'si', true); }
         out.item = it; return out;
       }
       case 'votar': {
@@ -770,10 +816,15 @@ var NUCLEO = (function () {
       case 'hecho': {
         it = buscar(op.id);
         if (!it) return { ok: false, error: 'La actividad ya no existe' };
-        var val = op.valor ? 'SI' : '';
-        if (txt(it.hecho) === val) return { ok: true, sinCambios: true, item: it };
+        // Resultado de una actividad confirmada: SI = realizada, NO = no se realizó, vacío = por realizar
+        var val = resultado(op.valor);
+        if (val && it.estado !== 'confirmed') return { ok: false, error: 'Primero confirma la actividad' };
+        if (resultado(it.hecho) === val) return { ok: true, sinCambios: true, item: it };
+        var antesR = resultado(it.hecho);
         it.hecho = val; tocar(it);
-        log(val ? 'marcó como hecha' : 'desmarcó', it, '', val ? 'hecho' : null, actor + ' marcó como hecha ' + Q + it.titulo + C);
+        var acc = val === 'SI' ? 'marcó como realizada' : val === 'NO' ? 'marcó como no realizada' : 'volvió a por realizar';
+        log(acc, it, RESULTADO_TXT[antesR] + ' → ' + RESULTADO_TXT[val], val ? 'hecho' : null,
+          actor + (val === 'SI' ? ' marcó como realizada ' : ' indicó que no se realizó ') + Q + it.titulo + C);
         out.item = it; return out;
       }
       case 'eliminar': {
@@ -958,7 +1009,8 @@ var NUCLEO = (function () {
 
   return {
     aplicar: aplicar, aplicarGlobal: aplicarGlobal, vista: vista, participantes: participantes, ESTADO_TXT: ESTADO_TXT, CAT_TXT: CAT_TXT, AVISO_TXT: AVISO_TXT, AVISO_MIN: AVISO_MIN, TEMA_TXT: TEMA_TXT,
-    corto: corto, etiquetaDia: etiquetaDia, nombresLista: nombresLista, addDays: addDays, diffDays: diffDays, d2u: d2u, u2d: u2d, nuevoId: nuevoId, esSi: esSi, pad: pad, DOW: DOW, MES: MES
+    corto: corto, etiquetaDia: etiquetaDia, nombresLista: nombresLista, addDays: addDays, diffDays: diffDays, d2u: d2u, u2d: u2d, nuevoId: nuevoId, esSi: esSi, pad: pad, DOW: DOW, MES: MES,
+    resultado: resultado, RESULTADO_TXT: RESULTADO_TXT
   };
 })();
 
@@ -966,7 +1018,7 @@ var NUCLEO = (function () {
 <script>
 const SEED = {"rev": 1, "viajes": [{"id": "demo1", "nombre": "Viaje de ejemplo", "inicio": "2026-12-07", "fin": "2026-12-09", "zona": "America/Lima", "zona_origen": "America/Lima", "personas": "", "notas": "Datos de ejemplo. Conecta tu hoja para ver tus planes de viaje.", "estado": "activo", "creado_por": "Ejemplo", "creado_en": "2026-10-28T13:00:00.000Z", "auto_confirmar": "SI"}], "personas": [{"nombre": "Persona 1", "color": "#0A84FF"}, {"nombre": "Persona 2", "color": "#FF375F"}], "dias": [{"viaje": "demo1", "fecha": "2026-12-07", "titulo": "Llegada", "lugar": "", "tema": "traslado", "nota": ""}, {"viaje": "demo1", "fecha": "2026-12-08", "titulo": "Día completo", "lugar": "", "tema": "ciudad", "nota": ""}, {"viaje": "demo1", "fecha": "2026-12-09", "titulo": "Regreso", "lugar": "", "tema": "traslado", "nota": ""}], "items": [{"viaje": "demo1", "id": "e01", "fecha": "2026-11-20", "hora": "", "fin": "", "titulo": "Comprar los pasajes", "cat": "tramite", "estado": "confirmed", "nota": "", "lugar": "", "costo": "", "moneda": "", "reserva": "", "aviso": "d1", "aviso_fecha": "", "aviso_enviado": "", "hecho": "", "orden": 1, "creado_por": "Ejemplo", "creado_en": "2026-10-28T13:00:00.000Z", "act_por": "Ejemplo", "act_en": "2026-10-28T13:00:00.000Z", "version": 1, "responsable": "Persona 1"}, {"viaje": "demo1", "id": "e02", "fecha": "2026-12-07", "hora": "10:00", "fin": "", "titulo": "Llegada y check-in", "cat": "vuelo", "estado": "confirmed", "nota": "", "lugar": "", "costo": "", "moneda": "", "reserva": "", "aviso": "none", "aviso_fecha": "", "aviso_enviado": "", "hecho": "", "orden": 2, "creado_por": "Ejemplo", "creado_en": "2026-10-28T13:00:00.000Z", "act_por": "Ejemplo", "act_en": "2026-10-28T13:00:00.000Z", "version": 1, "responsable": ""}, {"viaje": "demo1", "id": "e03", "fecha": "2026-12-07", "hora": "", "fin": "", "titulo": "Paseo por el centro", "cat": "visita", "estado": "pending", "nota": "Ejemplo de actividad por decidir", "lugar": "", "costo": "", "moneda": "", "reserva": "", "aviso": "none", "aviso_fecha": "", "aviso_enviado": "", "hecho": "", "orden": 3, "creado_por": "Ejemplo", "creado_en": "2026-10-28T13:00:00.000Z", "act_por": "Ejemplo", "act_en": "2026-10-28T13:00:00.000Z", "version": 1, "responsable": ""}, {"viaje": "demo1", "id": "e04", "fecha": "2026-12-08", "hora": "", "fin": "", "titulo": "Museo principal", "cat": "visita", "estado": "confirmed", "nota": "", "lugar": "", "costo": "", "moneda": "", "reserva": "", "aviso": "none", "aviso_fecha": "", "aviso_enviado": "", "hecho": "", "orden": 4, "creado_por": "Ejemplo", "creado_en": "2026-10-28T13:00:00.000Z", "act_por": "Ejemplo", "act_en": "2026-10-28T13:00:00.000Z", "version": 1, "responsable": ""}, {"viaje": "demo1", "id": "e05", "fecha": "2026-12-08", "hora": "20:00", "fin": "", "titulo": "Cena con vista", "cat": "comida", "estado": "pending", "nota": "", "lugar": "", "costo": "30", "moneda": "USD", "reserva": "", "aviso": "none", "aviso_fecha": "", "aviso_enviado": "", "hecho": "", "orden": 5, "creado_por": "Ejemplo", "creado_en": "2026-10-28T13:00:00.000Z", "act_por": "Ejemplo", "act_en": "2026-10-28T13:00:00.000Z", "version": 1, "responsable": "Persona 2"}, {"viaje": "demo1", "id": "e06", "fecha": "2026-12-09", "hora": "15:00", "fin": "", "titulo": "Vuelo de regreso", "cat": "vuelo", "estado": "confirmed", "nota": "", "lugar": "", "costo": "", "moneda": "", "reserva": "", "aviso": "d1", "aviso_fecha": "", "aviso_enviado": "", "hecho": "", "orden": 6, "creado_por": "Ejemplo", "creado_en": "2026-10-28T13:00:00.000Z", "act_por": "Ejemplo", "act_en": "2026-10-28T13:00:00.000Z", "version": 1, "responsable": ""}], "votos": [], "evals": [], "historial": [{"fecha": "2026-10-28T13:00:00.000Z", "viaje": "demo1", "persona": "Sistema", "accion": "creó", "ref": "", "titulo": "el plan de ejemplo", "detalle": ""}]};
 const N = NUCLEO;
-const APP_VERSION = '3.1 · noviembre 2026';
+const APP_VERSION = '3.2 · noviembre 2026';
 const TABS = {itinerario:'Itinerario', agenda:'Día', decidir:'Por decidir', actividad:'Actividad', viaje:'Plan de viaje'};
 const TABLBL = {itinerario:'Itinerario', agenda:'Día', decidir:'Decidir', actividad:'Actividad', viaje:'Plan'};
 const TABICO = {itinerario:'week', agenda:'agenda', decidir:'decidir', actividad:'feed', viaje:'suitcase'};
@@ -1015,6 +1067,7 @@ const P = {
  sync:'<path d="M19.5 12a7.5 7.5 0 0 1-13 5.1M4.5 12a7.5 7.5 0 0 1 13-5.1"/><path d="M17.5 3v4h-4M6.5 21v-4h4"/>',
  circle:'<circle cx="12" cy="12" r="8.5"/>',
  checkc:'<circle cx="12" cy="12" r="9" fill="currentColor" stroke="none"/><path d="M8 12.3l2.7 2.7 5.5-5.5" stroke="#fff"/>',
+ xcirc:'<circle cx="12" cy="12" r="9" fill="currentColor" stroke="none"/><path d="M9 9l6 6M15 9l-6 6" stroke="#fff"/>',
  visita:'<path d="M3.5 20.5h17M4.5 9.5h15M12 3.5l8 4.5H4zM6.5 9.5v8M10 9.5v8M14 9.5v8M17.5 9.5v8"/>',
  playa:'<circle cx="12" cy="8" r="3"/><path d="M2 15.5c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5M2 19.5c2 0 2-1.5 4-1.5s2 1.5 4 1.5 2-1.5 4-1.5 2 1.5 4 1.5 2-1.5 4-1.5"/>',
  foto:'<rect x="3" y="7" width="18" height="13" rx="3"/><path d="M8.5 7l1.4-2.5h4.2L15.5 7"/><circle cx="12" cy="13.5" r="3.4"/>',
@@ -1032,6 +1085,13 @@ const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt
 const plural = (n,a,b) => n + ' ' + (n===1 ? a : b);
 const lista = xs => xs.length<=1 ? (xs[0]||'') : xs.slice(0,-1).join(', ') + ' y ' + xs[xs.length-1];
 const isActive = i => i.estado==='pending' || i.estado==='confirmed';
+// Seguimiento: una actividad confirmada termina como realizada (SI), no realizada (NO) o sigue por realizar
+const realizada = i => i.estado==='confirmed' && i.hecho==='SI';
+const noRealizada = i => i.estado==='confirmed' && i.hecho==='NO';
+const porRealizar = i => i.estado==='confirmed' && i.hecho!=='SI' && i.hecho!=='NO';
+const VER = {todas:['Todas', () => true], decidir:['Por decidir', i => i.estado==='pending'], confirmadas:['Confirmadas', i => i.estado==='confirmed'],
+  realizar:['Por realizar', porRealizar], realizadas:['Realizadas', realizada], norealizadas:['No realizadas', noRealizada]};
+const SIG_RES = {'':'SI', SI:'NO', NO:''};
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const pad = N.pad;
 const ymd = t => t.getFullYear()+'-'+pad(t.getMonth()+1)+'-'+pad(t.getDate());
@@ -1061,7 +1121,8 @@ const GAS = false; // la app se publica solo en GitHub Pages
 })();
 let MODO = 'demo';
 let full = null, st = null, outbox = LS.get(K.outbox, []), net = 'demo', lastSync = 0, firstLoad = true;
-let ui = Object.assign({tab:'itinerario', plan:null, dia:null, semana:0, showDisc:{}, weekDisc:false, filtro:'todos', kcol:null}, LS.get(K.ui, {}));
+let ui = Object.assign({tab:'itinerario', plan:null, dia:null, semana:0, showDisc:{}, weekDisc:false, filtro:'todos', kcol:null, ver:'todas'}, LS.get(K.ui, {}));
+if(!VER[ui.ver]) ui.ver = 'todas';
 if(!LS.get(K.v3, false)){ ui.tab = 'itinerario'; ui.kcol = null; LS.set(K.v3, true); }
 if(!TABS[ui.tab]) ui.tab = 'itinerario';
 ui.sheet = null;
@@ -1247,7 +1308,7 @@ function delDia(f){ return st.items.filter(i => i.fecha===f).sort((a,b) => (+a.o
 function previos(){ return st.items.filter(i => i.fecha < V().inicio).sort((a,b) => a.fecha<b.fecha?-1:a.fecha>b.fecha?1:(+a.orden||0)-(+b.orden||0)); }
 function posteriores(){ return st.items.filter(i => i.fecha > V().fin).sort((a,b) => a.fecha<b.fecha?-1:a.fecha>b.fecha?1:(+a.orden||0)-(+b.orden||0)); }
 function listaDe(key){ return key==='antes' ? previos() : key==='despues' ? posteriores() : delDia(key); }
-function cuenta(items){ const c={pending:0,confirmed:0,discarded:0,archived:0,hecho:0}; items.forEach(i => { c[i.estado]++; if(i.hecho && isActive(i)) c.hecho++; }); return c; }
+function cuenta(items){ const c={pending:0,confirmed:0,discarded:0,archived:0,hecho:0,nohecho:0}; items.forEach(i => { c[i.estado]++; if(realizada(i)) c.hecho++; if(noRealizada(i)) c.nohecho++; }); return c; }
 function persona(n){ return (full ? full.personas : []).find(p => p.nombre===n); }
 function colorDe(n){ const p = persona(n); return p && p.color ? p.color : 'var(--gray)'; }
 function av(n, s){ return `<span class="av" style="--pc:${esc(colorDe(n))}${s?';--s:'+s+'px':''}" aria-hidden="true">${esc((n||'?').trim().charAt(0))}</span>`; }
@@ -1311,11 +1372,11 @@ function votosChips(id){
   const m = votosDe(id);
   return `<span class="votes">${st.personas.map(p => { const v=m[p.nombre]; return `<span class="vchip ${v?'':'wait'}" title="${esc(p.nombre)}: ${v==='si'?'sí':v==='no'?'no':'falta votar'}">${av(p.nombre)}<i class="${v||'na'}">${v==='si'?'✓':v==='no'?'✕':'·'}</i></span>`; }).join('')}</span>`;
 }
-const SW = {vsi:['Sí, va','check'], vno:['No','xmark'], hecho:['Hecha','check'], discard:['Descartar','xmark'], restore:['Restaurar','undo'], archive:['Archivar','archive']};
+const SW = {vsi:['Sí, va','check'], vno:['No','xmark'], hecho:['Realizada','check'], unconf:['Desconfirmar','undo'], discard:['Descartar','xmark'], restore:['Restaurar','undo'], archive:['Archivar','archive']};
 function rowHTML(it, o = {}){
   const st_ = it.estado, cat = CATC[it.cat] ? it.cat : 'visita';
   const ra = st_==='pending' ? 'vsi' : st_==='confirmed' ? 'hecho' : st_==='discarded' ? 'restore' : '';
-  const la = st_==='pending' ? 'vno' : st_==='confirmed' ? 'discard' : st_==='discarded' ? 'archive' : '';
+  const la = st_==='pending' ? 'vno' : st_==='confirmed' ? 'unconf' : st_==='discarded' ? 'archive' : '';
   const mi = votosDe(it.id)[cfg.persona];
   const nuevo = it.creado_por && it.creado_por!==cfg.persona && !['Hoja original','Línea base','Ejemplo','Sistema'].includes(it.creado_por) && it.creado_en > seen;
   const meta = [
@@ -1323,6 +1384,7 @@ function rowHTML(it, o = {}){
     it.hora ? `<span>${it.hora}${it.fin?' – '+it.fin:''}</span>` : '',
     nuevo ? `<span class="bn">Nuevo · ${esc(it.creado_por)}</span>` : '',
     st_==='pending' ? '<span class="bp">Por confirmar</span>' : '',
+    noRealizada(it) ? '<span class="bx">No se realizó</span>' : '',
     it.aviso && it.aviso!=='none' && isActive(it) ? `<span class="mi" title="${esc(N.AVISO_TXT[it.aviso])}">${ico('bell')}${it.aviso==='custom'?'':esc(N.AVISO_TXT[it.aviso].replace(' antes',''))}</span>` : '',
     costoTxt(it) ? `<span class="mi">${ico('money')}${esc(costoTxt(it))}</span>` : '',
     responsables(it).length ? `<span class="mi" title="Responsable: ${esc(N.nombresLista(it.responsable))}">${responsables(it).map(n => av(n, 18)).join('')}</span>` : ''
@@ -1332,14 +1394,12 @@ function rowHTML(it, o = {}){
   if(st_==='pending') pills = `<button class="pill ok ${mi==='si'?'sel':''}" data-act="vsi" data-id="${it.id}" aria-pressed="${mi==='si'}">${ico('check')}Sí, va</button><button class="pill no ${mi==='no'?'sel':''}" data-act="vno" data-id="${it.id}" aria-pressed="${mi==='no'}">${ico('xmark')}No</button>${st.personas.length>1?votosChips(it.id):''}`;
   if(st_==='discarded') pills = `<button class="pill blue" data-act="restore" data-id="${it.id}">${ico('undo')}Restaurar</button><button class="pill purple" data-act="archive" data-id="${it.id}">${ico('archive')}Archivar</button>`;
   if(st_==='archived') pills = `<button class="pill blue" data-act="restore" data-id="${it.id}">${ico('undo')}Restaurar</button><button class="pill no" data-act="delete" data-id="${it.id}">${ico('trash')}Eliminar</button>`;
-  const side = st_==='confirmed'
-    ? `<button class="chk ${it.hecho?'on':''}" data-act="hecho" data-id="${it.id}" aria-label="${it.hecho?'Marcar como pendiente':'Marcar como hecha'}" aria-pressed="${!!it.hecho}">${ico(it.hecho?'checkc':'circle')}</button>`
-    : `<span class="r-side">${ico('chev')}</span>`;
-  const swl = k => k==='hecho' && it.hecho ? 'Pendiente' : SW[k][0];
+  const side = st_==='confirmed' ? botonResultado(it, 'chk') : `<span class="r-side">${ico('chev')}</span>`;
+  const swl = k => k==='hecho' && realizada(it) ? 'Por realizar' : SW[k][0];
   return `<div class="sw" data-id="${it.id}" data-ra="${ra}" data-la="${la}">
     ${ra?`<div class="sw-act sw-r c-${ra}">${ico(SW[ra][1])}<span>${swl(ra)}</span></div>`:''}
     ${la?`<div class="sw-act sw-l c-${la}"><span>${SW[la][0]}</span>${ico(SW[la][1])}</div>`:''}
-    <div class="row s-${st_} ${it.hecho&&isActive(it)?'done':''}">
+    <div class="row s-${st_} ${realizada(it)?'done':''} ${noRealizada(it)?'nodone':''}">
       <span class="r-ico" style="--c:var(${CATC[cat]})">${ico(cat)}</span>
       <div class="r-main">
         ${meta?`<p class="r-meta">${meta}</p>`:''}
@@ -1374,15 +1434,20 @@ function columnasPlan(){
 }
 function etiquetaCol(c){ return c.tipo==='pre' ? 'Previo' : c.tipo==='post' ? 'Después' : 'Día ' + c.n; }
 function etiquetaFecha(f){ const c = columnasPlan().find(x => x.f===f); return c ? etiquetaCol(c) + ' · ' + N.corto(f) : N.corto(f); }
+// Botón de resultado de una confirmada: por realizar → realizada → no se realizó → por realizar
+function botonResultado(it, cls){
+  const v = realizada(it) ? 'SI' : noRealizada(it) ? 'NO' : '', sig = N.RESULTADO_TXT[SIG_RES[v]];
+  return `<button class="${cls} r-${v||'p'}" data-act="resultado" data-id="${it.id}" aria-label="${esc(it.titulo)}: ${N.RESULTADO_TXT[v]}. Tocar para marcar ${sig.toLowerCase()}" title="${N.RESULTADO_TXT[v]}">${ico(v==='SI'?'checkc':v==='NO'?'xcirc':'circle')}</button>`;
+}
 function cardHTML(it, fuera){
   const cat = CATC[it.cat] ? it.cat : 'visita', rs = responsables(it);
-  return `<div class="kc ${it.hecho?'done':''}" data-kid="${it.id}">
+  return `<div class="kc ${realizada(it)?'done':''} ${noRealizada(it)?'nodone':''} ${it.estado==='confirmed'?'conf':''}" data-kid="${it.id}">
     <button class="kc-grip" data-kgrip="${it.id}" aria-label="Arrastrar para mover ${esc(it.titulo)}">${GRIP}</button>
     <button class="kc-main" data-act="open" data-id="${it.id}">
       <span class="kc-t">${esc(it.titulo)}</span>
       ${it.nota?`<span class="kc-n">${esc(it.nota)}</span>`:''}
-      <span class="kc-m">${it.hora?`<span class="h">${it.hora}${it.fin?'–'+it.fin:''}</span>`:''}<span class="ci" style="--c:var(${CATC[cat]})">${ico(cat)}</span><span>${N.CAT_TXT[cat]}</span>${it.estado==='pending'?'<span class="bp">Por decidir</span>':''}${fuera?'<span class="bw">Revisa la hora</span>':''}${it.hecho?'<span>Hecha</span>':''}${rs.length?`<span class="avs" title="Responsable: ${esc(N.nombresLista(it.responsable))}">${rs.map(n => av(n, 22)).join('')}</span>`:''}</span>
-    </button></div>`;
+      <span class="kc-m">${it.hora?`<span class="h">${it.hora}${it.fin?'–'+it.fin:''}</span>`:''}<span class="ci" style="--c:var(${CATC[cat]})">${ico(cat)}</span><span>${N.CAT_TXT[cat]}</span>${it.estado==='pending'?'<span class="bp">Por decidir</span>':''}${fuera?'<span class="bw">Revisa la hora</span>':''}${realizada(it)?'<span class="br">Realizada</span>':noRealizada(it)?'<span class="bx">No se realizó</span>':''}${rs.length?`<span class="avs" title="Responsable: ${esc(N.nombresLista(it.responsable))}">${rs.map(n => av(n, 22)).join('')}</span>`:''}</span>
+    </button>${it.estado==='confirmed' ? botonResultado(it, 'kc-chk') : ''}</div>`;
 }
 function temaActual(){ return LS.get(K.tema, 'auto'); }
 function esOscuro(){ const t = temaActual(); return t==='dark' || (t==='auto' && matchMedia('(prefers-color-scheme: dark)').matches); }
@@ -1399,8 +1464,9 @@ function vItinerario(){
   const chips = cols.map((c,i) => `${c.tipo!=='pre' && i>0 && cols[i-1].tipo==='pre' ? '<span class="kb-sep" aria-hidden="true"></span>' : ''}<button class="kb-chip ${c.tipo==='pre'?'pre':''} ${c.f===t?'today':''} ${i===ui.kcol?'on':''}" data-act="kb-go" data-v="${i}" aria-label="Ir a ${etiquetaCol(c)}, ${fd(c.f).dowL} ${fd(c.f).n} de ${fd(c.f).mesL}"><small>${c.tipo==='pre'?'Previo':c.tipo==='post'?'Después':'Día '+c.n}</small><b>${c.tipo==='dia' ? fd(c.f).dow + ' ' + fd(c.f).n : fd(c.f).n + ' ' + fd(c.f).mes}</b></button>`).join('');
   const html = cols.map((c,i) => {
     const xs = delDia(c.f), act = xs.filter(isActive), disc = xs.filter(x => x.estado==='discarded'), pend = act.filter(x => x.estado==='pending').length;
+    const vis = act.filter(VER[ui.ver][1]);
     let maxH = '';
-    const cards = act.map(it => { const fuera = !!(it.hora && maxH && it.hora < maxH); if(it.hora && it.hora > maxH) maxH = it.hora; return cardHTML(it, fuera); }).join('');
+    const cards = vis.map(it => { const fuera = !!(it.hora && maxH && it.hora < maxH); if(it.hora && it.hora > maxH) maxH = it.hora; return cardHTML(it, fuera); }).join('');
     const d = diaMeta(c.f), antes = N.diffDays(c.f, V().inicio);
     const nota = c.tipo==='pre' ? plural(antes, 'día', 'días') + ' antes del Día 1 · no se cuenta'
       : c.tipo==='post' ? 'Después del viaje · no se cuenta'
@@ -1408,9 +1474,9 @@ function vItinerario(){
     const open = !!ui.showDisc[c.f];
     return `<section class="kb-col ${c.tipo!=='dia'?'pre':''} ${c.f===t?'today':''}" data-day="${c.f}" aria-label="${etiquetaCol(c)}, ${fd(c.f).dowL} ${fd(c.f).n} de ${fd(c.f).mesL}">
       <div class="kb-h"><div><span class="kb-n">${etiquetaCol(c)}</span><span class="kb-f">${fd(c.f).dow} ${fd(c.f).n} ${fd(c.f).mes}</span>
-        <span class="kb-x">${plural(act.length,'actividad','actividades')}${pend?' · '+pend+' por decidir':''}${nota?' · '+esc(nota):''}</span></div>
+        <span class="kb-x">${ui.ver==='todas' ? plural(act.length,'actividad','actividades') + (pend?' · '+pend+' por decidir':'') : vis.length + ' de ' + act.length + ' · ' + VER[ui.ver][0].toLowerCase()}${nota?' · '+esc(nota):''}</span></div>
         <button class="kb-go" data-act="goto-day" data-day="${c.f}" aria-label="Abrir ${etiquetaCol(c)} en detalle">${ico('open')}</button></div>
-      <div class="kb-list">${cards || '<p class="kb-empty">Sin actividades. Arrastra aquí una actividad o agrégala.</p>'}</div>
+      <div class="kb-list">${cards || (ui.ver==='todas' ? '<p class="kb-empty">Sin actividades. Arrastra aquí una actividad o agrégala.</p>' : `<p class="kb-empty">Nada ${esc(VER[ui.ver][0].toLowerCase())} este día.</p>`)}</div>
       <button class="kb-add" data-act="add" data-day="${c.f}">${ico('plus')}Agregar</button>
       ${disc.length?`<button class="kb-dt" data-act="toggle-disc" data-day="${c.f}" aria-expanded="${open}">${ico(open?'chevdown':'chev')}Descartadas · ${disc.length}</button>${open?disc.map(x => `<button class="kb-d" data-act="open" data-id="${x.id}">${esc(x.titulo)}</button>`).join(''):''}`:''}
     </section>`;
@@ -1420,9 +1486,27 @@ function vItinerario(){
   <div class="kb-sum"><span><b>${plural(nd,'día de viaje','días de viaje')}</b> · ${N.corto(V().inicio)} → ${N.corto(V().fin)}</span><span class="kb-cd">${cd}</span>
     <span class="kb-tools"><button class="kb-arrow" data-act="kb-prev" aria-label="Días anteriores">${ico('left')}</button><button class="kb-arrow" data-act="kb-next" aria-label="Días siguientes">${ico('chev')}</button><button data-act="open-sheet" data-v="apariencia" aria-label="Apariencia: claro u oscuro">${ico(esOscuro()?'moon':'sun')}</button></span></div>
   <div class="kb-strip" id="kbstrip" aria-label="Días del plan">${chips}</div>
+  ${seguimientoHTML()}
   <div class="kb-leg"><span><i></i>Día del plan (se cuenta)</span><span><i class="pre"></i>${nPre?'Previo (no se cuenta)':'Previo: aparece cuando hay actividades antes del Día 1'}</span></div>
-  <div class="kb" id="kb">${html}</div>
+  <div class="kb ${ui.ver!=='todas'?'filtrado':''}" id="kb">${html}</div>
+  ${ui.ver!=='todas' ? `<p class="kb-hint">Estás viendo solo <b>${esc(VER[ui.ver][0].toLowerCase())}</b>. Para mover actividades vuelve a <button class="linkbtn" data-act="ver" data-v="todas">Todas</button>.</p>` : ''}
   <p class="kb-hint">Desliza los días a los lados. Para mover una actividad, arrástrala desde ${GRIP.replace('<svg','<svg style="display:inline;width:9px;height:13px;vertical-align:-1px"')} hacia arriba, abajo u otro día. Gira el teléfono para ver 3 días (las pestañas vuelven al ponerlo vertical); en una TV se ven hasta 7.</p>`;
+}
+// Seguimiento del plan: barra de avance y filtros (con conteos) para el tablero
+function seguimientoHTML(){
+  const xs = st.items.filter(isActive), n = k => xs.filter(VER[k][1]).length;
+  const c = {}; Object.keys(VER).forEach(k => { c[k] = n(k); });
+  const pct = c.confirmadas ? Math.round(c.realizadas * 100 / c.confirmadas) : 0;
+  const seg = (k, cls) => c[k] ? `<i class="${cls}" style="flex:${c[k]}"></i>` : '';
+  const resumen = c.confirmadas
+    ? `<b>${c.realizadas}</b> ${c.realizadas===1?'realizada':'realizadas'} de ${plural(c.confirmadas,'confirmada','confirmadas')} · ${pct} %`
+    : 'Aún no hay actividades confirmadas';
+  const desc = `${c.realizadas} realizadas, ${c.norealizadas} no realizadas, ${c.realizar} por realizar y ${c.decidir} por decidir`;
+  return `<section class="segui" aria-label="Seguimiento del plan">
+    <div class="sg-h"><span class="sg-t">${ico('check')}Seguimiento</span><span class="sg-r">${resumen}</span></div>
+    ${xs.length ? `<div class="sg-bar" role="img" aria-label="${desc}">${seg('realizadas','r')}${seg('norealizadas','x')}${seg('realizar','c')}${seg('decidir','p')}</div>` : ''}
+    <div class="vfs" role="group" aria-label="Ver en el tablero">${Object.keys(VER).map(k => `<button class="vf vf-${k} ${ui.ver===k?'on':''}" data-act="ver" data-v="${k}" aria-pressed="${ui.ver===k}"><i></i>${VER[k][0]}<b>${c[k]}</b></button>`).join('')}</div>
+  </section>`;
 }
 function kbIrA(i, suave){
   const b = $('#kb'); if(!b) return;
@@ -1512,7 +1596,7 @@ function vAgenda(){
     ${active.length?'':`<p class="list-empty">${multi?'No hay preparativos.':'Aún no hay actividades para este día.'}</p>`}
     <button class="addrow" data-act="add" data-day="${key}"><span class="plusc">${ico('plus')}</span>${multi?'Agregar preparativo':'Agregar actividad'}</button>
   </div>
-  ${active.length?`<p class="hint">Desliza a la derecha para votar sí${st.personas.length>1?'':' (se confirma)'} o marcar como hecha; a la izquierda para votar no o descartar. Tócala para ver y editar todo.</p>`:''}
+  ${active.length?`<p class="hint">Desliza a la derecha para votar sí${st.personas.length>1?'':' (se confirma)'} o marcar como realizada; a la izquierda para votar no o desconfirmar. El círculo de la derecha marca realizada → no se realizó → por realizar.</p>`:''}
   ${disc.length?`<div class="sh"><button class="disc-t" data-act="toggle-disc" data-day="${key}" aria-expanded="${open}">${ico(open?'chevdown':'chev')}Descartadas <span>${disc.length}</span></button>${open?`<button class="link" data-act="archive-disc" data-day="${key}">Archivar todas</button>`:''}</div>
     ${open?`<div class="list">${disc.map(i => rowHTML(i, {fecha:multi})).join('')}</div><p class="hint">Desliza a la derecha para restaurar o a la izquierda para archivar.</p>`:''}`:''}
   ${evals}`;
@@ -1525,7 +1609,7 @@ function presupuesto(items){
 }
 function chip(i){
   const cat = CATC[i.cat] ? i.cat : 'visita';
-  return `<button class="chip s-${i.estado} ${i.hecho?'done':''}" data-act="open" data-id="${i.id}"><span class="ci" style="--c:var(${CATC[cat]})">${ico(cat)}</span><div>${i.hora?`<small>${i.hora}${i.fin?'–'+i.fin:''}</small>`:''}<span class="ct">${esc(i.titulo)}</span>${i.estado==='pending'?'<small class="cp">Por decidir</small>':''}</div></button>`;
+  return `<button class="chip s-${i.estado} ${realizada(i)?'done':''} ${noRealizada(i)?'nodone':''}" data-act="open" data-id="${i.id}"><span class="ci" style="--c:var(${CATC[cat]})">${ico(cat)}</span><div>${i.hora?`<small>${i.hora}${i.fin?'–'+i.fin:''}</small>`:''}<span class="ct">${esc(i.titulo)}</span>${i.estado==='pending'?'<small class="cp">Por decidir</small>':''}</div></button>`;
 }
 function vSemana(){
   const ini = V().inicio, fin = V().fin;
@@ -1671,7 +1755,7 @@ function render(){
   if(ui.tab==='actividad' && st.historial[0] && st.historial[0].fecha > seen){ seen = st.historial[0].fecha; LS.set(K.seen, seen); }
   const strip = $('#strip'), on = strip && strip.querySelector('.on');
   if(on) strip.scrollLeft = on.offsetLeft - strip.clientWidth/2 + on.clientWidth/2;
-  LS.set(K.ui, {tab:ui.tab, plan:ui.plan, dia:ui.dia, semana:ui.semana, showDisc:ui.showDisc, weekDisc:ui.weekDisc, filtro:ui.filtro, kcol:ui.kcol});
+  LS.set(K.ui, {tab:ui.tab, plan:ui.plan, dia:ui.dia, semana:ui.semana, showDisc:ui.showDisc, weekDisc:ui.weekDisc, filtro:ui.filtro, kcol:ui.kcol, ver:ui.ver});
   actualizarInsignia();
 }
 function go(tab){
@@ -1697,12 +1781,20 @@ const MSG = {confirmed:'Confirmada', discarded:'Descartada. Bajó al final del d
 function buscar(id){ return st.items.find(i => i.id===id); }
 function cambiarEstado(id, estado){
   const it = buscar(id); if(!it) return;
-  act({op:'estado', id, estado}, {msg:MSG[estado], undo:{op:'estado', id, estado:it.estado}});
+  const msg = it.estado==='confirmed' && estado==='pending' ? 'Desconfirmada. Volvió a por decidir' : MSG[estado];
+  act({op:'estado', id, estado}, {msg, undo: it.estado==='confirmed' && estado==='pending' ? null : {op:'estado', id, estado:it.estado}});
 }
 function votar(id, v){
   act({op:'votar', id, voto:v}, {msg: r => r.item && r.item.estado==='confirmed' ? 'Confirmada: todos votaron sí' : r.item && r.item.estado==='discarded' ? 'Descartada: nadie votó sí' : v==='si' ? 'Votaste sí' : 'Votaste no'});
 }
-function hecho(id){ const it = buscar(id); if(it) act({op:'hecho', id, valor:!it.hecho}, {msg: it.hecho ? 'Marcada como pendiente' : '¡Hecha! Califícala cuando quieras'}); }
+function marcar(id, valor){
+  const it = buscar(id); if(!it) return;
+  if(it.estado!=='confirmed'){ toast('Primero confirma la actividad'); return; }
+  const antes = realizada(it) ? 'SI' : noRealizada(it) ? 'NO' : '';
+  act({op:'hecho', id, valor}, {msg: valor==='SI' ? 'Realizada. Califícala cuando quieras' : valor==='NO' ? 'Marcada como no realizada' : 'Volvió a por realizar', undo:{op:'hecho', id, valor:antes}});
+}
+function hecho(id){ const it = buscar(id); if(it) marcar(id, realizada(it) ? '' : 'SI'); }
+function ciclarResultado(id){ const it = buscar(id); if(it) marcar(id, SIG_RES[realizada(it) ? 'SI' : noRealizada(it) ? 'NO' : '']); }
 async function enLote(items, estado, msg){
   if(!items.length) return;
   for(const it of items){
@@ -1740,8 +1832,12 @@ function sheetItem(){
         <div class="acts"><button class="abtn ok ${mi==='si'?'sel':''}" data-act="sheet-vote" data-v="si">${ico('check')}Sí, va</button><button class="abtn no ${mi==='no'?'sel':''}" data-act="sheet-vote" data-v="no">${ico('xmark')}No</button></div>
       </div></div>`;
     }
-    if(s==='pending') A.push(['confirmed','ok','check','Confirmar ya'],['discarded','no','xmark','Descartar']);
-    if(s==='confirmed') A.push(['pending','neutral','undo','Volver a decidir'],['discarded','no','xmark','Descartar']);
+    if(s==='pending') A.push(['confirmed','ok','check','Confirmar'],['discarded','no','xmark','Descartar']);
+    if(s==='confirmed'){
+      A.push(['pending','neutral','undo','Desconfirmar'],['discarded','no','xmark','Descartar']);
+      const r_ = realizada(it) ? 'SI' : noRealizada(it) ? 'NO' : '';
+      extra += `<div><p class="fhead">Seguimiento</p><div class="seg3" role="group" aria-label="¿Se realizó?">${[['','Por realizar','circle'],['SI','Realizada','checkc'],['NO','No se realizó','xcirc']].map(([v,l,i]) => `<button class="s3 s3-${v||'p'} ${r_===v?'on':''}" data-act="sheet-resultado" data-v="${v}" aria-pressed="${r_===v}">${ico(i)}<span>${l}</span></button>`).join('')}</div><p class="ffoot">Después de hacerla (o si no se pudo), márcalo aquí. Queda en Actividad con tu nombre y la hora.</p></div>`;
+    }
     if(s==='discarded') A.push(['pending','blue','undo','Restaurar'],['archived','purple','archive','Archivar']);
     if(s==='archived') A.push(['pending','blue','undo','Restaurar'],['delete','no','trash','Eliminar']);
     extra += `<div><p class="fhead">Estado</p><div class="acts">${A.map(([a,c,i,l]) => `<button class="abtn ${c}" data-act="sheet-status" data-v="${a}">${ico(i)}${l}</button>`).join('')}</div></div>`;
@@ -1754,7 +1850,7 @@ function sheetItem(){
   }
   return `${head(isNew?'Nueva actividad':'Actividad', closeBtn('Cancelar'), saveBtn('sheet-save', isNew?'Agregar':'Guardar'))}
   <div class="sh-body">
-    ${isNew?'':`<div class="status-line">${badgeEstado(it.estado)}${it.hecho?'<span class="fs c">Hecha</span>':''}<span>${fd(it.fecha).dowL} ${fd(it.fecha).n} de ${fd(it.fecha).mesL}</span></div>`}
+    ${isNew?'':`<div class="status-line">${badgeEstado(it.estado)}${realizada(it)?'<span class="fs c">Realizada</span>':noRealizada(it)?'<span class="fs d">No se realizó</span>':it.estado==='confirmed'?'<span class="fs x">Por realizar</span>':''}<span>${fd(it.fecha).dowL} ${fd(it.fecha).n} de ${fd(it.fecha).mesL}</span></div>`}
     <p class="ferr" id="f-err" hidden></p>
     <div class="fgroup">
       <div class="frow"><input class="fin" id="f-title" value="${esc(it.titulo)}" placeholder="Nombre de la actividad" aria-label="Nombre de la actividad" ${isNew?'autofocus':''}></div>
@@ -2040,7 +2136,7 @@ function sheetAvisos(){
 }
 function textoCompartir(modo){
   const L = [`${V().nombre} · ${N.corto(V().inicio)} – ${N.corto(V().fin)}`, ''];
-  const linea = i => `  ${i.estado==='pending'?'◦':i.hecho?'✓':'•'} ${i.hora?i.hora+(i.fin?'–'+i.fin:'')+'  ':''}${i.titulo}${i.estado==='pending'?' (por decidir)':''}${i.nota?'. '+i.nota:''}`;
+  const linea = i => `  ${i.estado==='pending'?'◦':realizada(i)?'✓':noRealizada(i)?'✗':'•'} ${i.hora?i.hora+(i.fin?'–'+i.fin:'')+'  ':''}${i.titulo}${i.estado==='pending'?' (por decidir)':''}${i.nota?'. '+i.nota:''}`;
   const filtra = xs => xs.filter(i => modo==='todo' ? isActive(i) : i.estado==='confirmed');
   const pre = filtra(previos());
   if(pre.length){ L.push('Antes del viaje'); pre.forEach(i => L.push(linea(i).replace('  ', '  ' + N.corto(i.fecha) + ' · '))); L.push(''); }
@@ -2221,6 +2317,8 @@ document.addEventListener('click', async e => {
     case 'rate-day': { const me = miEval('dia', dia), n = me.estrellas===+v ? 0 : +v; const nota = (($('#evnote-'+dia)||{}).value) ?? me.nota; act({op:'evaluar', tipo:'dia', ref:dia, estrellas:n, nota}); break; }
     case 'f-star': ui.sheet.rating = ui.sheet.rating===+v ? 0 : +v; document.querySelectorAll('#f-stars .star').forEach((s,k) => { s.classList.toggle('on', k<ui.sheet.rating); s.setAttribute('aria-pressed', k<ui.sheet.rating); }); break;
     case 'filtro': ui.filtro = v; render(); break;
+    case 'ver': { const sx = $('#kb') ? $('#kb').scrollLeft : 0; ui.ver = v; render(); if($('#kb')) $('#kb').scrollLeft = sx; break; }
+    case 'resultado': ciclarResultado(id); break;
     case 'sheet-close': closeSheet(); break;
     case 'sheet-save': { const r = await guardarForm(); if(r) closeSheet(); break; }
     case 'sheet-vote': { const sid = ui.sheet.id; closeSheet(); votar(sid, v); break; }
@@ -2228,6 +2326,10 @@ document.addEventListener('click', async e => {
       const sid = ui.sheet.id;
       if(v==='delete'){ ui.sheet = {type:'confirm', what:'delete', id:sid}; renderSheet(); break; }
       const r = await guardarForm(); if(!r) break; closeSheet(); cambiarEstado(sid, v); break;
+    }
+    case 'sheet-resultado': {
+      const sid = ui.sheet.id;
+      const r = await guardarForm(); if(!r) break; closeSheet(); marcar(sid, v); break;
     }
     case 'sheet-move': { const it = buscar(ui.sheet.id); if(!it) break;
       const xs = listaDe(it.fecha < V().inicio ? 'antes' : it.fecha > V().fin ? 'despues' : it.fecha).filter(i => i.fecha===it.fecha && isActive(i));
@@ -2303,7 +2405,7 @@ setInterval(() => { if(MODO!=='demo' && document.visibilityState==='visible' && 
 matchMedia('(prefers-color-scheme: dark)').addEventListener && matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => { if(temaActual()==='auto'){ aplicarTema(); render(); } });
 
 /* Deslizar filas */
-const ACCION = {vsi:id => votar(id,'si'), vno:id => votar(id,'no'), hecho:id => hecho(id), discard:id => cambiarEstado(id,'discarded'), restore:id => cambiarEstado(id,'pending'), archive:id => cambiarEstado(id,'archived')};
+const ACCION = {vsi:id => votar(id,'si'), vno:id => votar(id,'no'), hecho:id => hecho(id), unconf:id => cambiarEstado(id,'pending'), discard:id => cambiarEstado(id,'discarded'), restore:id => cambiarEstado(id,'pending'), archive:id => cambiarEstado(id,'archived')};
 document.addEventListener('pointerdown', e => {
   if(e.button>0) return;
   const row = e.target.closest('.sw .row'); if(!row || e.target.closest('.pill,.chk')) return;
