@@ -610,6 +610,25 @@ body.t-itinerario .lt{max-width:none}
 .rchip .av{box-shadow:0 0 0 2px rgba(255,255,255,.6)}
 @media (prefers-reduced-motion: reduce){*{animation:none!important;transition:none!important}}
 @media (min-width:640px){.lt h1{font-size:40px}}
+/* v3.3 · duración, costos y cobros */
+.dur-chips{display:flex;flex-wrap:wrap;gap:8px;padding:0 16px}
+.dchip{border:0;border-radius:999px;background:var(--fill);color:var(--label);font:600 15px var(--font);padding:8px 14px;cursor:pointer}
+.dchip.on{background:var(--blue);color:#fff}
+.dchip:focus-visible{outline:2px solid var(--blue);outline-offset:2px}
+.fin-prev{font-size:17px;color:var(--label2);text-align:right;flex:1;min-width:0;font-variant-numeric:tabular-nums}
+.tot-prev{margin:6px 20px 0;font-size:15px;font-weight:600;color:var(--label2);font-variant-numeric:tabular-nums}
+.cobro-box{background:var(--bg2);border-radius:20px;padding:14px 16px;display:grid;gap:12px}
+.cobro-sum{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:13px;color:var(--label2)}
+.cobro-sum span{display:grid;gap:2px}
+.cobro-sum b{font-size:17px;color:var(--label);font-variant-numeric:tabular-nums}
+.cobro-sum .warn b{color:var(--orange-ink)} .cobro-sum .ok b{color:var(--green-ink)}
+.pago-row{padding:0}
+.pagos{list-style:none;margin:0;padding:0;display:grid;gap:8px}
+.pagos li{display:flex;align-items:center;gap:10px;font-size:15px;color:var(--label2)}
+.pagos li span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pagos li b{color:var(--label);font-variant-numeric:tabular-nums}
+.sg-cob{margin:6px 0 0;font-size:13px;color:var(--label2);font-variant-numeric:tabular-nums}
+.vf.vf-saldo i{background:var(--orange)}
 </style>
 </head>
 <body>
@@ -653,14 +672,22 @@ setTimeout(function(){ if(!window.__itbOk) window.__itbFallo('la app no terminó
 var NUCLEO = (function () {
   var ESTADO_TXT = { pending: 'Por confirmar', confirmed: 'Confirmada', discarded: 'Descartada', archived: 'Archivada' };
   var CAT_TXT = { visita: 'Visita', playa: 'Playa', foto: 'Mirador', comida: 'Comida', compras: 'Compras', noche: 'Noche',
-    transporte: 'Traslado', vuelo: 'Vuelo', alojamiento: 'Alojamiento', tramite: 'Trámite' };
+    transporte: 'Traslado', taxi: 'Taxi', caminata: 'Caminata', bus: 'Bus', metro: 'Metro o tren', bote: 'Bote o lancha', auto: 'Auto o alquiler',
+    vuelo: 'Vuelo', alojamiento: 'Alojamiento', tramite: 'Trámite' };
+  // Traslados: no muestran hora de fin por defecto; la duración es opcional
+  var TRASLADO = { transporte: 1, taxi: 1, caminata: 1, bus: 1, metro: 1, bote: 1, auto: 1, vuelo: 1 };
+  // Traslados sin reserva (el vuelo sí la tiene)
+  var SIN_RESERVA = { transporte: 1, taxi: 1, caminata: 1, bus: 1, metro: 1, bote: 1, auto: 1 };
+  var TARIFA_TXT = { grupo: 'Del grupo', persona: 'Por persona' };
+  var DUR_RAPIDAS = [30, 60, 120];
   var AVISO_TXT = { none: 'Sin aviso', at: 'A la hora', h1: '1 hora antes', h3: '3 horas antes', d1: '1 día antes',
     d3: '3 días antes', w1: '1 semana antes', custom: 'Fecha personalizada' };
   var AVISO_MIN = { at: 0, h1: 60, h3: 180, d1: 1440, d3: 4320, w1: 10080 };
   var TEMA_TXT = { ciudad: 'Ciudad', playa: 'Playa', traslado: 'Traslado' };
-  var CAMPOS = ['fecha', 'hora', 'fin', 'titulo', 'cat', 'nota', 'lugar', 'costo', 'moneda', 'reserva', 'aviso', 'aviso_fecha', 'responsable', 'creado_por'];
-  var CAMPO_TXT = { fecha: 'la fecha', hora: 'la hora', fin: 'la hora de fin', titulo: 'el nombre', cat: 'la categoría',
-    nota: 'la nota', lugar: 'el lugar', costo: 'el costo', moneda: 'la moneda', reserva: 'la reserva', aviso: 'el aviso',
+  // fin no lo envía la app: se calcula con hora + duración
+  var CAMPOS = ['fecha', 'hora', 'fin', 'duracion', 'titulo', 'cat', 'nota', 'lugar', 'costo', 'moneda', 'tarifa', 'personas', 'reserva', 'aviso', 'aviso_fecha', 'responsable', 'creado_por'];
+  var CAMPO_TXT = { fecha: 'la fecha', hora: 'la hora', fin: 'la hora de fin', duracion: 'la duración', titulo: 'el nombre', cat: 'la categoría',
+    nota: 'la nota', lugar: 'el lugar', costo: 'el costo', moneda: 'la moneda', tarifa: 'la tarifa', personas: 'las personas', reserva: 'la reserva', aviso: 'el aviso',
     aviso_fecha: 'la fecha del aviso', responsable: 'el responsable', creado_por: 'quién la creó' };
   var DOW = ['dom', 'lun', 'mar', 'mié', 'jue', 'vie', 'sáb'];
   var MES = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
@@ -674,6 +701,46 @@ var NUCLEO = (function () {
   function nuevoId() { return 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
   function esSi(v) { return v === true || /^(si|sí|true|1|yes)$/i.test(String(v || '').trim()); }
   function txt(v) { return v == null ? '' : String(v); }
+
+  /* ---------- Duración, tarifas, personas y pagos ---------- */
+  function entero(v) { var n = Math.round(+String(v == null ? '' : v).replace(',', '.')); return isFinite(n) && n > 0 ? n : 0; }
+  function aMin(h) { var m = /^(\d{1,2}):(\d{2})$/.exec(txt(h).trim()); return m ? (+m[1]) * 60 + (+m[2]) : null; }
+  function hm(m) { m = ((m % 1440) + 1440) % 1440; return pad(Math.floor(m / 60)) + ':' + pad(m % 60); }
+  // Hora de fin = hora de inicio + duración (si no hay duración, no hay hora de fin)
+  function finDe(hora, dur) { var a = aMin(hora), d = entero(dur); return a !== null && d ? hm(a + d) : ''; }
+  function duracionTxt(m) { m = entero(m); if (!m) return ''; var h = Math.floor(m / 60), r = m % 60; return (h ? h + ' h' : '') + (h && r ? ' ' : '') + (r ? r + ' min' : ''); }
+  function redondo(n) { return Math.round(n * 100) / 100; }
+  // Total de la actividad: tarifa del grupo = monto; por persona = monto × personas (o todos los viajeros)
+  function totalDe(it, nPersonas) {
+    var c = +String(it.costo || '').replace(',', '.');
+    if (!isFinite(c) || c <= 0) return 0;
+    return it.tarifa === 'grupo' ? c : c * (entero(it.personas) || nPersonas);
+  }
+  function pagosDe(st, id) { return (st.pagos || []).filter(function (p) { return p.item === id; }); }
+  function pagadoDe(st, id) { return pagosDe(st, id).reduce(function (a, p) { return a + (+p.monto || 0); }, 0); }
+  function saldoDe(st, it) { return Math.max(0, redondo(totalDe(it, st.personas.length) - pagadoDe(st, it.id))); }
+  function estadoPagoDe(st, it) {
+    var t = totalDe(it, st.personas.length); if (!t) return '';
+    var p = pagadoDe(st, it.id); return p >= t - 0.005 ? 'pagado' : p > 0 ? 'adelanto' : 'sin pagar';
+  }
+  // Presupuesto por moneda (solo actividades confirmadas): total, pagado y saldo
+  function cobros(st, lista) {
+    var n = st.personas.length, out = {};
+    (lista || st.items).forEach(function (it) {
+      if (it.estado !== 'confirmed') return;
+      var t = totalDe(it, n); if (!t) return;
+      var m = it.moneda || 'BRL', o = out[m] || (out[m] = { total: 0, pagado: 0, saldo: 0 }), p = Math.min(pagadoDe(st, it.id), t);
+      o.total += t; o.pagado += p; o.saldo += t - p;
+    });
+    Object.keys(out).forEach(function (m) { out[m].total = redondo(out[m].total); out[m].pagado = redondo(out[m].pagado); out[m].saldo = redondo(out[m].saldo); });
+    return out;
+  }
+  // Limpia los campos numéricos y de opción antes de guardar
+  function normalizarItem(it) {
+    it.duracion = entero(it.duracion) ? String(entero(it.duracion)) : '';
+    it.personas = entero(it.personas) ? String(entero(it.personas)) : '';
+    if (!TARIFA_TXT[it.tarifa]) it.tarifa = '';
+  }
 
   function delDia(st, fecha) {
     return st.items.filter(function (i) { return i.fecha === fecha; })
@@ -708,7 +775,7 @@ var NUCLEO = (function () {
   function aplicar(st, op, actor, ahora) {
     var out = { ok: true, hist: [], avisos: [], cambio: false, item: null };
     var Q = '«', C = '»';
-    st.votos = st.votos || []; st.evals = st.evals || []; st.dias = st.dias || [];
+    st.votos = st.votos || []; st.evals = st.evals || []; st.dias = st.dias || []; st.pagos = st.pagos || [];
 
     function log(accion, it, detalle, tipo, texto, para) {
       out.hist.push({ fecha: ahora, persona: actor, accion: accion, ref: it && it.id ? it.id : '', titulo: it ? it.titulo : '', detalle: detalle || '' });
@@ -754,9 +821,14 @@ var NUCLEO = (function () {
         it = buscar(d.id);
         if ((!it || d.titulo !== undefined) && !txt(d.titulo).trim()) return { ok: false, error: 'Falta el nombre de la actividad' };
         if ((!it || d.fecha !== undefined) && !/^\d{4}-\d{2}-\d{2}$/.test(txt(d.fecha))) return { ok: false, error: 'Falta la fecha' };
+        if (d.duracion !== undefined && txt(d.duracion).trim() !== '' && !entero(d.duracion)) return { ok: false, error: 'La duración debe ser un número de minutos' };
+        if (d.personas !== undefined && txt(d.personas).trim() !== '' && !entero(d.personas)) return { ok: false, error: 'La cantidad de personas debe ser mayor que cero' };
+        if (d.tarifa !== undefined && txt(d.tarifa) !== '' && !TARIFA_TXT[d.tarifa]) return { ok: false, error: 'Elige si el costo es del grupo o por persona' };
+        if (d.costo !== undefined && txt(d.costo).trim() !== '' && !isFinite(+String(d.costo).replace(',', '.'))) return { ok: false, error: 'El costo debe ser un número' };
         if (!it) {
           it = { id: d.id || nuevoId(), estado: 'pending', orden: 0, creado_por: actor, creado_en: ahora, version: 0, aviso_enviado: '', hecho: '' };
           CAMPOS.forEach(function (k) { it[k] = txt(d[k]); });
+          normalizarItem(it); it.fin = finDe(it.hora, it.duracion);
           it.creado_por = actor;
           if (!it.aviso) it.aviso = 'none'; if (!it.cat) it.cat = 'visita';
           tocar(it); st.items.push(it); insertarPorHora(st, it);
@@ -774,11 +846,14 @@ var NUCLEO = (function () {
             return { ok: false, conflicto: true, item: it, error: (it.act_por || 'Otra persona') + ' cambió esta actividad hace poco. Se cargó su versión.' };
           var antesFecha = it.fecha, cambios = [];
           CAMPOS.forEach(function (k) { if (d[k] !== undefined && txt(d[k]) !== txt(it[k])) { cambios.push(k); it[k] = txt(d[k]); } });
+          normalizarItem(it);
+          var finNuevo = finDe(it.hora, it.duracion);
+          if (finNuevo !== txt(it.fin)) { it.fin = finNuevo; if (cambios.indexOf('fin') < 0) cambios.push('fin'); }
           if (!cambios.length) return { ok: true, sinCambios: true, item: it };
           if (cambios.indexOf('fecha') > -1) { numerar(delDia(st, antesFecha).filter(function (i) { return i.id !== it.id; })); insertarPorHora(st, it); }
           if (cambios.some(function (k) { return k === 'fecha' || k === 'hora' || k === 'aviso' || k === 'aviso_fecha'; })) it.aviso_enviado = '';
           tocar(it);
-          var partes = [], resto = cambios.filter(function (k) { return k !== 'fecha' && k !== 'responsable' && k !== 'creado_por'; });
+          var partes = [], resto = cambios.filter(function (k) { return k !== 'fecha' && k !== 'responsable' && k !== 'creado_por' && k !== 'fin'; });
           if (cambios.indexOf('fecha') > -1) partes.push('movió al ' + etiquetaDia(st.viaje, it.fecha));
           if (cambios.indexOf('responsable') > -1) partes.push(it.responsable ? 'asignó a ' + nombresLista(it.responsable) : 'quitó el responsable');
           if (cambios.indexOf('creado_por') > -1) partes.push('indicó que la creó ' + (it.creado_por || '—'));
@@ -795,6 +870,9 @@ var NUCLEO = (function () {
         var nuevo = op.estado;
         if (!ESTADO_TXT[nuevo]) return { ok: false, error: 'Estado desconocido' };
         if (it.estado === nuevo) return { ok: true, sinCambios: true, item: it };
+        // Con pagos registrados no se puede sacar de confirmada: primero se quitan los pagos
+        if (it.estado === 'confirmed' && nuevo !== 'confirmed' && pagosDe(st, it.id).length)
+          return { ok: false, error: 'Esta actividad tiene pagos registrados. Quítalos antes de cambiar su estado' };
         var prev = it.estado; it.estado = nuevo; tocar(it);
         // El resultado (realizada / no realizada) solo tiene sentido en una actividad confirmada
         if (nuevo !== 'confirmed') it.hecho = '';
@@ -834,6 +912,7 @@ var NUCLEO = (function () {
         st.items = st.items.filter(function (i) { return i.id !== it.id; });
         st.votos = st.votos.filter(function (v) { return v.item !== it.id; });
         st.evals = st.evals.filter(function (e) { return !(e.tipo === 'actividad' && e.ref === it.id); });
+        st.pagos = st.pagos.filter(function (p) { return p.item !== it.id; });
         numerar(delDia(st, it.fecha));
         log('eliminó', it, 'Eliminada para siempre', 'eliminacion', actor + ' eliminó para siempre ' + Q + it.titulo + C);
         return out;
@@ -923,6 +1002,33 @@ var NUCLEO = (function () {
         } else log('editó los datos del viaje', { id: '', titulo: '' }, '', null);
         return out;
       }
+      case 'pagar': {
+        // Registra un pago (adelanto o total) en una actividad confirmada con costo
+        it = buscar(op.id);
+        if (!it) return { ok: false, error: 'La actividad ya no existe' };
+        if (it.estado !== 'confirmed') return { ok: false, error: 'Primero confirma la actividad para registrar pagos' };
+        var total = totalDe(it, st.personas.length);
+        if (!total) return { ok: false, error: 'Esta actividad no tiene costo' };
+        var monto = redondo(+String(op.monto == null ? '' : op.monto).replace(',', '.'));
+        if (!isFinite(monto) || monto <= 0) return { ok: false, error: 'El monto debe ser mayor que cero' };
+        var falta = saldoDe(st, it);
+        if (monto > falta + 0.005) return { ok: false, error: 'El pago supera lo que falta pagar (' + falta + ' ' + (it.moneda || 'BRL') + ')' };
+        var quien = st.personas.some(function (p) { return p.nombre === op.persona; }) ? op.persona : actor;
+        var moneda = it.moneda || 'BRL';
+        st.pagos.push({ id: nuevoId(), viaje: st.viaje.id, item: it.id, fecha: ahora.slice(0, 10), persona: quien, monto: monto, moneda: moneda, nota: txt(op.nota).trim() });
+        var quedan = saldoDe(st, it);
+        log('registró un pago', it, (quien === actor ? '' : quien + ' · ') + monto + ' ' + moneda + (quedan > 0 ? ' · faltan ' + quedan + ' ' + moneda : ' · pagado completo'), null);
+        out.item = it; return out;
+      }
+      case 'quitar_pago': {
+        var pg = null;
+        st.pagos.forEach(function (p) { if (p.id === op.pago) pg = p; });
+        if (!pg) return { ok: true, sinCambios: true };
+        it = buscar(pg.item);
+        st.pagos = st.pagos.filter(function (p) { return p.id !== pg.id; });
+        log('quitó un pago', it || { id: '', titulo: '' }, pg.monto + ' ' + pg.moneda + ' de ' + pg.persona, null);
+        return out;
+      }
       case 'probar': {
         out.avisos.push({ tipo: 'prueba', texto: 'Aviso de prueba para ' + actor + '. Si lo ves en el iPhone, los avisos funcionan.', ref: '', para: 'yo' });
         return out;
@@ -946,7 +1052,8 @@ var NUCLEO = (function () {
     return { viaje: v, personas: participantes(full, v), _vid: vid,
       dias: (full.dias || []).filter(function (d) { return d.viaje === vid; }), items: items,
       votos: (full.votos || []).filter(function (x) { return ids[x.item]; }),
-      evals: (full.evals || []).filter(function (e) { return e.viaje === vid; }) };
+      evals: (full.evals || []).filter(function (e) { return e.viaje === vid; }),
+      pagos: (full.pagos || []).filter(function (p) { return p.viaje === vid; }) };
   }
   function fusionar(full, sub) {
     var vid = sub._vid, viejos = {}, nuevos = {};
@@ -958,10 +1065,11 @@ var NUCLEO = (function () {
     full.dias = (full.dias || []).filter(function (d) { return d.viaje !== vid; }).concat(sub.dias);
     full.votos = (full.votos || []).filter(function (x) { return !viejos[x.item] && !nuevos[x.item]; }).concat(sub.votos);
     full.evals = (full.evals || []).filter(function (e) { return e.viaje !== vid; }).concat(sub.evals);
+    full.pagos = (full.pagos || []).filter(function (p) { return p.viaje !== vid; }).concat(sub.pagos || []);
   }
   var ZONAS = /^[A-Za-z_]+\/[A-Za-z_\/]+$/;
   function aplicarGlobal(full, op, actor, ahora) {
-    full.viajes = full.viajes || []; full.dias = full.dias || []; full.votos = full.votos || []; full.evals = full.evals || [];
+    full.viajes = full.viajes || []; full.dias = full.dias || []; full.votos = full.votos || []; full.evals = full.evals || []; full.pagos = full.pagos || [];
     var Q = '«', C = '»';
     function buscarPlan(id) { var r = null; full.viajes.forEach(function (x) { if (x.id === id) r = x; }); return r; }
     if (op.op === 'crear_viaje' || op.op === 'editar_viaje') {
@@ -1010,7 +1118,10 @@ var NUCLEO = (function () {
   return {
     aplicar: aplicar, aplicarGlobal: aplicarGlobal, vista: vista, participantes: participantes, ESTADO_TXT: ESTADO_TXT, CAT_TXT: CAT_TXT, AVISO_TXT: AVISO_TXT, AVISO_MIN: AVISO_MIN, TEMA_TXT: TEMA_TXT,
     corto: corto, etiquetaDia: etiquetaDia, nombresLista: nombresLista, addDays: addDays, diffDays: diffDays, d2u: d2u, u2d: u2d, nuevoId: nuevoId, esSi: esSi, pad: pad, DOW: DOW, MES: MES,
-    resultado: resultado, RESULTADO_TXT: RESULTADO_TXT
+    resultado: resultado, RESULTADO_TXT: RESULTADO_TXT,
+    TRASLADO: TRASLADO, SIN_RESERVA: SIN_RESERVA, TARIFA_TXT: TARIFA_TXT, DUR_RAPIDAS: DUR_RAPIDAS,
+    entero: entero, aMin: aMin, finDe: finDe, duracionTxt: duracionTxt, totalDe: totalDe, pagosDe: pagosDe, pagadoDe: pagadoDe,
+    saldoDe: saldoDe, estadoPagoDe: estadoPagoDe, cobros: cobros, normalizarItem: normalizarItem, redondo: redondo
   };
 })();
 
@@ -1018,12 +1129,12 @@ var NUCLEO = (function () {
 <script>
 const SEED = {"rev": 1, "viajes": [{"id": "demo1", "nombre": "Viaje de ejemplo", "inicio": "2026-12-07", "fin": "2026-12-09", "zona": "America/Lima", "zona_origen": "America/Lima", "personas": "", "notas": "Datos de ejemplo. Conecta tu hoja para ver tus planes de viaje.", "estado": "activo", "creado_por": "Ejemplo", "creado_en": "2026-10-28T13:00:00.000Z", "auto_confirmar": "SI"}], "personas": [{"nombre": "Persona 1", "color": "#0A84FF"}, {"nombre": "Persona 2", "color": "#FF375F"}], "dias": [{"viaje": "demo1", "fecha": "2026-12-07", "titulo": "Llegada", "lugar": "", "tema": "traslado", "nota": ""}, {"viaje": "demo1", "fecha": "2026-12-08", "titulo": "Día completo", "lugar": "", "tema": "ciudad", "nota": ""}, {"viaje": "demo1", "fecha": "2026-12-09", "titulo": "Regreso", "lugar": "", "tema": "traslado", "nota": ""}], "items": [{"viaje": "demo1", "id": "e01", "fecha": "2026-11-20", "hora": "", "fin": "", "titulo": "Comprar los pasajes", "cat": "tramite", "estado": "confirmed", "nota": "", "lugar": "", "costo": "", "moneda": "", "reserva": "", "aviso": "d1", "aviso_fecha": "", "aviso_enviado": "", "hecho": "", "orden": 1, "creado_por": "Ejemplo", "creado_en": "2026-10-28T13:00:00.000Z", "act_por": "Ejemplo", "act_en": "2026-10-28T13:00:00.000Z", "version": 1, "responsable": "Persona 1"}, {"viaje": "demo1", "id": "e02", "fecha": "2026-12-07", "hora": "10:00", "fin": "", "titulo": "Llegada y check-in", "cat": "vuelo", "estado": "confirmed", "nota": "", "lugar": "", "costo": "", "moneda": "", "reserva": "", "aviso": "none", "aviso_fecha": "", "aviso_enviado": "", "hecho": "", "orden": 2, "creado_por": "Ejemplo", "creado_en": "2026-10-28T13:00:00.000Z", "act_por": "Ejemplo", "act_en": "2026-10-28T13:00:00.000Z", "version": 1, "responsable": ""}, {"viaje": "demo1", "id": "e03", "fecha": "2026-12-07", "hora": "", "fin": "", "titulo": "Paseo por el centro", "cat": "visita", "estado": "pending", "nota": "Ejemplo de actividad por decidir", "lugar": "", "costo": "", "moneda": "", "reserva": "", "aviso": "none", "aviso_fecha": "", "aviso_enviado": "", "hecho": "", "orden": 3, "creado_por": "Ejemplo", "creado_en": "2026-10-28T13:00:00.000Z", "act_por": "Ejemplo", "act_en": "2026-10-28T13:00:00.000Z", "version": 1, "responsable": ""}, {"viaje": "demo1", "id": "e04", "fecha": "2026-12-08", "hora": "", "fin": "", "titulo": "Museo principal", "cat": "visita", "estado": "confirmed", "nota": "", "lugar": "", "costo": "", "moneda": "", "reserva": "", "aviso": "none", "aviso_fecha": "", "aviso_enviado": "", "hecho": "", "orden": 4, "creado_por": "Ejemplo", "creado_en": "2026-10-28T13:00:00.000Z", "act_por": "Ejemplo", "act_en": "2026-10-28T13:00:00.000Z", "version": 1, "responsable": ""}, {"viaje": "demo1", "id": "e05", "fecha": "2026-12-08", "hora": "20:00", "fin": "", "titulo": "Cena con vista", "cat": "comida", "estado": "pending", "nota": "", "lugar": "", "costo": "30", "moneda": "USD", "reserva": "", "aviso": "none", "aviso_fecha": "", "aviso_enviado": "", "hecho": "", "orden": 5, "creado_por": "Ejemplo", "creado_en": "2026-10-28T13:00:00.000Z", "act_por": "Ejemplo", "act_en": "2026-10-28T13:00:00.000Z", "version": 1, "responsable": "Persona 2"}, {"viaje": "demo1", "id": "e06", "fecha": "2026-12-09", "hora": "15:00", "fin": "", "titulo": "Vuelo de regreso", "cat": "vuelo", "estado": "confirmed", "nota": "", "lugar": "", "costo": "", "moneda": "", "reserva": "", "aviso": "d1", "aviso_fecha": "", "aviso_enviado": "", "hecho": "", "orden": 6, "creado_por": "Ejemplo", "creado_en": "2026-10-28T13:00:00.000Z", "act_por": "Ejemplo", "act_en": "2026-10-28T13:00:00.000Z", "version": 1, "responsable": ""}], "votos": [], "evals": [], "historial": [{"fecha": "2026-10-28T13:00:00.000Z", "viaje": "demo1", "persona": "Sistema", "accion": "creó", "ref": "", "titulo": "el plan de ejemplo", "detalle": ""}]};
 const N = NUCLEO;
-const APP_VERSION = '3.2 · noviembre 2026';
+const APP_VERSION = '3.3 · noviembre 2026';
 const TABS = {itinerario:'Itinerario', agenda:'Día', decidir:'Por decidir', actividad:'Actividad', viaje:'Plan de viaje'};
 const TABLBL = {itinerario:'Itinerario', agenda:'Día', decidir:'Decidir', actividad:'Actividad', viaje:'Plan'};
 const TABICO = {itinerario:'week', agenda:'agenda', decidir:'decidir', actividad:'feed', viaje:'suitcase'};
 const GRIP = '<svg viewBox="0 0 12 18" fill="currentColor" aria-hidden="true"><circle cx="3" cy="3" r="1.6"/><circle cx="9" cy="3" r="1.6"/><circle cx="3" cy="9" r="1.6"/><circle cx="9" cy="9" r="1.6"/><circle cx="3" cy="15" r="1.6"/><circle cx="9" cy="15" r="1.6"/></svg>';
-const CATC = {visita:'--indigo', playa:'--teal', foto:'--orange', comida:'--brown', compras:'--pink', noche:'--purple', transporte:'--cyan', vuelo:'--blue', alojamiento:'--mint', tramite:'--gray'};
+const CATC = {visita:'--indigo', playa:'--teal', foto:'--orange', comida:'--brown', compras:'--pink', noche:'--purple', transporte:'--cyan', taxi:'--yellow', caminata:'--mint', bus:'--teal', metro:'--indigo', bote:'--blue', auto:'--pink', vuelo:'--blue', alojamiento:'--mint', tramite:'--gray'};
 const ZONAS = [['America/Lima','Perú'],['America/Sao_Paulo','Brasil (Río, São Paulo)'],['America/Bogota','Colombia'],['America/Santiago','Chile'],['America/Argentina/Buenos_Aires','Argentina'],
   ['America/La_Paz','Bolivia'],['America/Guayaquil','Ecuador'],['America/Mexico_City','México'],['America/Cancun','Cancún'],['America/Panama','Panamá'],['America/New_York','EE. UU. (Nueva York, Miami)'],
   ['America/Los_Angeles','EE. UU. (Los Ángeles)'],['Europe/Madrid','España'],['Europe/Paris','Francia, Italia, Alemania'],['Europe/London','Reino Unido, Portugal'],['Asia/Tokyo','Japón'],['Asia/Bangkok','Tailandia'],['Australia/Sydney','Australia (Sídney)']];
@@ -1074,7 +1185,13 @@ const P = {
  comida:'<path d="M7 3.5v7M4.8 3.5v4.3a2.2 2.2 0 0 0 4.4 0V3.5M7 10.5v10M17.5 20.5V3.5c-2.2 1-3.5 3.6-3.5 7v3h3.5"/>',
  compras:'<path d="M5.5 8h13l-1 12.5h-11z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',
  noche:'<path d="M19.5 14.6A7.8 7.8 0 1 1 9.4 4.5a6.2 6.2 0 0 0 10.1 10.1z"/>',
- transporte:'<path d="M3.5 15.5v-3.6l2.1-5a1.5 1.5 0 0 1 1.4-.9h10a1.5 1.5 0 0 1 1.4.9l2.1 5v3.6z"/><path d="M3.5 11.9h17"/><circle cx="7.5" cy="17.8" r="1.8"/><circle cx="16.5" cy="17.8" r="1.8"/>',
+ transporte:'<circle cx="5.5" cy="18" r="2"/><circle cx="18.5" cy="6" r="2"/><path d="M7.5 18h7.5a3.5 3.5 0 0 0 0-7h-5a3.5 3.5 0 0 1 0-7h6.5"/>',
+ auto:'<path d="M3.5 15.5v-3.6l2.1-5a1.5 1.5 0 0 1 1.4-.9h10a1.5 1.5 0 0 1 1.4.9l2.1 5v3.6z"/><path d="M3.5 11.9h17"/><circle cx="7.5" cy="17.8" r="1.8"/><circle cx="16.5" cy="17.8" r="1.8"/>',
+ taxi:'<rect x="8.5" y="2.8" width="7" height="2.8" rx=".9"/><path d="M3.5 15.5v-3.6l2.1-5a1.5 1.5 0 0 1 1.4-.9h10a1.5 1.5 0 0 1 1.4.9l2.1 5v3.6z"/><path d="M3.5 11.9h17"/><circle cx="7.5" cy="17.8" r="1.8"/><circle cx="16.5" cy="17.8" r="1.8"/>',
+ caminata:'<circle cx="13.5" cy="4.5" r="2"/><path d="M11.5 9.5l-2.5 5 3 2.5-1.5 5M12.5 9.5l3 2.8 2.5-.8M11 9.5l1.5 3.5"/>',
+ bus:'<rect x="4.5" y="3.5" width="15" height="14" rx="2.5"/><path d="M4.5 10.5h15M8 17.5v3M16 17.5v3"/><circle cx="8.5" cy="14" r=".7"/><circle cx="15.5" cy="14" r=".7"/>',
+ metro:'<rect x="5.5" y="3.5" width="13" height="14" rx="3"/><path d="M5.5 10.5h13M9 17.5l-2 3.5M15 17.5l2 3.5"/><circle cx="9" cy="14" r=".7"/><circle cx="15" cy="14" r=".7"/>',
+ bote:'<path d="M3 14.5h18l-2.5 5H5.5z"/><path d="M7.5 14.5V5l6 9.5M13.5 9.5l4 5"/>',
  vuelo:'<path d="M21 3.5L3.5 10.5l7 2.5 2.5 7z"/><path d="M10.5 13L21 3.5"/>',
  alojamiento:'<path d="M3.5 18.5V6M3.5 14.5h17v4M20.5 14.5V12a3 3 0 0 0-3-3H11v5.5"/><circle cx="7.3" cy="11.3" r="1.9"/>',
  tramite:'<rect x="5" y="3.5" width="14" height="17" rx="2.5"/><path d="M8.8 12.3l2.2 2.2 4.2-4.4"/>'
@@ -1090,7 +1207,8 @@ const realizada = i => i.estado==='confirmed' && i.hecho==='SI';
 const noRealizada = i => i.estado==='confirmed' && i.hecho==='NO';
 const porRealizar = i => i.estado==='confirmed' && i.hecho!=='SI' && i.hecho!=='NO';
 const VER = {todas:['Todas', () => true], decidir:['Por decidir', i => i.estado==='pending'], confirmadas:['Confirmadas', i => i.estado==='confirmed'],
-  realizar:['Por realizar', porRealizar], realizadas:['Realizadas', realizada], norealizadas:['No realizadas', noRealizada]};
+  realizar:['Por realizar', porRealizar], realizadas:['Realizadas', realizada], norealizadas:['No realizadas', noRealizada],
+  saldo:['Por pagar', i => i.estado==='confirmed' && N.saldoDe(st, i) > 0]};
 const SIG_RES = {'':'SI', SI:'NO', NO:''};
 const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const pad = N.pad;
@@ -1198,7 +1316,7 @@ function elegirPlan(xs){
 }
 function armarVista(){
   if(!full){ st = null; return; }
-  ['viajes','items','votos','evals','dias','historial','personas'].forEach(k => full[k] = full[k] || []);
+  ['viajes','items','votos','evals','dias','historial','personas','pagos'].forEach(k => full[k] = full[k] || []);
   const activos = full.viajes.filter(v => v.estado!=='archivado');
   if(!ui.plan || !full.viajes.some(v => v.id===ui.plan)) ui.plan = (elegirPlan(activos) || elegirPlan(full.viajes) || {}).id || null;
   const sub = ui.plan ? N.vista(full, ui.plan) : null;
@@ -1342,7 +1460,7 @@ function textoAviso(it){
   const t = new Date(base), f = N.u2d(base);
   return `Aviso el ${N.corto(f)} a las ${pad(t.getUTCHours())}:${pad(t.getUTCMinutes())} (hora de ${z})${it.hora?'':'. Sin hora, se toma las 09:00'}`;
 }
-function costoTxt(it){ if(!it.costo) return ''; const n=+String(it.costo).replace(',','.'); if(!isFinite(n)) return ''; return (MON[it.moneda||'BRL']||it.moneda||'') + ' ' + (Math.round(n*100)/100).toLocaleString('es-PE'); }
+function costoTxt(it){ const t = N.totalDe(it, st.personas.length); return t ? monTxt(it.moneda, t) : ''; }
 function hace(iso){
   const s = (Date.now() - new Date(iso).getTime())/1000;
   if(!isFinite(s)) return '';
@@ -1446,7 +1564,7 @@ function cardHTML(it, fuera){
     <button class="kc-main" data-act="open" data-id="${it.id}">
       <span class="kc-t">${esc(it.titulo)}</span>
       ${it.nota?`<span class="kc-n">${esc(it.nota)}</span>`:''}
-      <span class="kc-m">${it.hora?`<span class="h">${it.hora}${it.fin?'–'+it.fin:''}</span>`:''}<span class="ci" style="--c:var(${CATC[cat]})">${ico(cat)}</span><span>${N.CAT_TXT[cat]}</span>${it.estado==='pending'?'<span class="bp">Por decidir</span>':''}${fuera?'<span class="bw">Revisa la hora</span>':''}${realizada(it)?'<span class="br">Realizada</span>':noRealizada(it)?'<span class="bx">No se realizó</span>':''}${rs.length?`<span class="avs" title="Responsable: ${esc(N.nombresLista(it.responsable))}">${rs.map(n => av(n, 22)).join('')}</span>`:''}</span>
+      <span class="kc-m">${it.hora?`<span class="h">${it.hora}${it.fin?'–'+it.fin:''}</span>`:''}<span class="ci" style="--c:var(${CATC[cat]})">${ico(cat)}</span><span>${N.CAT_TXT[cat]}</span>${it.estado==='pending'?'<span class="bp">Por decidir</span>':''}${fuera?'<span class="bw">Revisa la hora</span>':''}${realizada(it)?'<span class="br">Realizada</span>':noRealizada(it)?'<span class="bx">No se realizó</span>':''}${pagoBadge(it)}${rs.length?`<span class="avs" title="Responsable: ${esc(N.nombresLista(it.responsable))}">${rs.map(n => av(n, 22)).join('')}</span>`:''}</span>
     </button>${it.estado==='confirmed' ? botonResultado(it, 'kc-chk') : ''}</div>`;
 }
 function temaActual(){ return LS.get(K.tema, 'auto'); }
@@ -1505,7 +1623,7 @@ function seguimientoHTML(){
   return `<section class="segui" aria-label="Seguimiento del plan">
     <div class="sg-h"><span class="sg-t">${ico('check')}Seguimiento</span><span class="sg-r">${resumen}</span></div>
     ${xs.length ? `<div class="sg-bar" role="img" aria-label="${desc}">${seg('realizadas','r')}${seg('norealizadas','x')}${seg('realizar','c')}${seg('decidir','p')}</div>` : ''}
-    <div class="vfs" role="group" aria-label="Ver en el tablero">${Object.keys(VER).map(k => `<button class="vf vf-${k} ${ui.ver===k?'on':''}" data-act="ver" data-v="${k}" aria-pressed="${ui.ver===k}"><i></i>${VER[k][0]}<b>${c[k]}</b></button>`).join('')}</div>
+    ${Object.keys(N.cobros(st)).length ? `<p class="sg-cob">${esc(cobrosTxt(N.cobros(st)))}</p>` : ''}<div class="vfs" role="group" aria-label="Ver en el tablero">${Object.keys(VER).map(k => `<button class="vf vf-${k} ${ui.ver===k?'on':''}" data-act="ver" data-v="${k}" aria-pressed="${ui.ver===k}"><i></i>${VER[k][0]}<b>${c[k]}</b></button>`).join('')}</div>
   </section>`;
 }
 function kbIrA(i, suave){
@@ -1563,7 +1681,7 @@ function vAgenda(){
       <div class="hero-top"><span class="gchip">${ico('pin')}<span>${esc(d.lugar||'Agrega el lugar')}</span></span><button class="gbtn" data-act="edit-day" data-day="${key}" aria-label="Editar día">${ico('pencil')}</button></div>
       <div class="hero-mid"><div><p class="hero-date">${f.dowL} ${f.n} de ${f.mesL}</p><h2>${esc(diaTitulo(key))}</h2></div>
       <div class="hring">${ring(ringN, ringT, 56, 5, true)}<span>${ringN}/${ringT}</span></div></div>
-      <div class="hero-foot"><span class="gchip">${ico('check')}${plural(dc.confirmed,'confirmada','confirmadas')}</span>${dc.pending?`<span class="gchip">${dc.pending} por decidir</span>`:''}${costo.txt?`<span class="gchip">${ico('money')}${esc(costo.txt)} p/p</span>`:''}${me.estrellas?`<span class="gchip">${ico('star')}${me.estrellas} de 5</span>`:''}</div>
+      <div class="hero-foot"><span class="gchip">${ico('check')}${plural(dc.confirmed,'confirmada','confirmadas')}</span>${dc.pending?`<span class="gchip">${dc.pending} por decidir</span>`:''}${costo.txt?`<span class="gchip">${ico('money')}${esc(costo.txt)} confirmado</span>`:''}${me.estrellas?`<span class="gchip">${ico('star')}${me.estrellas} de 5</span>`:''}</div>
       ${d.nota?`<p class="hero-date" style="font-size:14px">${esc(d.nota)}</p>`:''}
     </section>`;
   }
@@ -1602,10 +1720,8 @@ function vAgenda(){
   ${evals}`;
 }
 function presupuesto(items){
-  const tot = {};
-  items.filter(isActive).forEach(i => { const n=+String(i.costo||'').replace(',','.'); if(i.costo && isFinite(n)) tot[i.moneda||'BRL'] = (tot[i.moneda||'BRL']||0) + n; });
-  const txt = Object.entries(tot).map(([m,n]) => (MON[m]||m) + ' ' + (Math.round(n*100)/100).toLocaleString('es-PE')).join(' + ');
-  return {tot, txt};
+  const c = N.cobros(st, items.filter(i => i.estado==='confirmed'));
+  return {c, txt: Object.entries(c).map(([m,o]) => monTxt(m, o.total)).join(' + ')};
 }
 function chip(i){
   const cat = CATC[i.cat] ? i.cat : 'visita';
@@ -1702,9 +1818,10 @@ function vViaje(){
   <div class="sh"><h3>Presupuesto por persona</h3></div>
   <div class="srows budget">
     ${porDia.map(x => `<div class="brow"><span>${N.corto(x.f)} · ${esc(diaTitulo(x.f))}</span><b>${esc(x.p.txt)}</b></div>`).join('')}
-    <div class="brow tot"><span>Total estimado</span><b>${esc(pres.txt || 'Sin costos')}</b></div>
+    <div class="brow tot"><span>Total confirmado</span><b>${esc(pres.txt || 'Sin costos')}</b></div>
+    ${Object.entries(pres.c).map(([m,o]) => `<div class="brow"><span>Pagado · falta</span><b>${esc(monTxt(m,o.pagado))} · ${esc(monTxt(m,o.saldo))}</b></div>`).join('')}
   </div>
-  <p class="hint">Suma el costo por persona de las actividades confirmadas y por decidir. Agrega costos al editar cada actividad.</p>
+  <p class="hint">Suma solo las actividades confirmadas: el total del grupo, o el monto por persona por la cantidad de personas. Lo pagado y lo que falta sale de los cobros de cada actividad.</p>
   <div class="sh"><h3>Tú y la conexión</h3></div>
   <div class="srows">
     ${srow('open-sheet','quien','user','--indigo','Tú eres', esc(cfg.persona||'Elegir'))}
@@ -1813,16 +1930,77 @@ function closeSheet(){ ui.sheet = null; renderSheet(); if(lastFocus && document.
 const head = (title, left, right) => `<div class="sh-head">${left||'<span></span>'}<h2>${title}</h2>${right||'<span></span>'}</div>`;
 const closeBtn = (lbl='Cerrar') => `<button class="cbtn" data-act="sheet-close" aria-label="${lbl}">${ico('xmark')}</button>`;
 const saveBtn = (act, lbl='Guardar') => `<button class="cbtn primary" data-act="${act}" aria-label="${lbl}">${ico('check')}</button>`;
+/* ---------- Duración, costos y cobros (versión 3.3) ---------- */
+function fmtN(n){ return N.redondo(n).toLocaleString('es-PE'); }
+function monTxt(m, n){ return (MON[m||'BRL'] || m || '') + ' ' + fmtN(n); }
+// Google Maps: el enlace abre la app si está instalada, o el sitio si no
+function mapsUrl(it){
+  const dia = enViaje(it.fecha) ? (diaMeta(it.fecha).lugar || '') : '';
+  return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(it.lugar || (it.titulo + (dia ? ', ' + dia : '')));
+}
+function finTxt(hora, dur){
+  const f = N.finDe(hora, dur);
+  return f || (N.entero(dur) ? 'Falta la hora de inicio' : 'Sin hora de fin');
+}
+function totalTxt(tar, costo, personas, moneda){
+  const c = +String(costo || '').replace(',', '.');
+  if(!c || !isFinite(c) || c <= 0) return 'Sin costo';
+  if(tar === 'grupo') return 'Total ' + monTxt(moneda, c) + ' para el grupo';
+  const p = N.entero(personas);
+  return 'Total ' + monTxt(moneda, c * (p || st.personas.length)) + (p ? ' · ' + p + ' pers.' : ' · todos (' + st.personas.length + ')');
+}
+function pagoBadge(it){
+  if(it.estado !== 'confirmed') return '';
+  const e = N.estadoPagoDe(st, it);
+  return e === 'pagado' ? '<span class="br">Pagado</span>' : e === 'adelanto' ? '<span class="bw">Adelanto</span>' : e === 'sin pagar' ? '<span class="bx">Sin pagar</span>' : '';
+}
+function cobrosTxt(c){
+  return Object.entries(c).map(([m, o]) => monTxt(m, o.total) + ' · pagado ' + monTxt(m, o.pagado) + ' · falta ' + monTxt(m, o.saldo)).join(' / ');
+}
+// Lo que muestra el formulario cuando cambian duración, tarifa, personas o categoría
+function previewSheet(){
+  const g = id => { const el = document.getElementById(id); return el ? el.value : ''; };
+  const cat = (document.querySelector('input[name="f-cat"]:checked') || {}).value || 'visita';
+  const rr = document.getElementById('row-reserva'); if(rr) rr.hidden = !!N.SIN_RESERVA[cat];
+  const fp = document.getElementById('f-finprev'); if(fp) fp.textContent = finTxt(g('f-hora'), g('f-dur'));
+  const rp = document.getElementById('row-personas'); if(rp) rp.hidden = g('f-tarifa') === 'grupo';
+  const tp = document.getElementById('f-totprev'); if(tp) tp.textContent = totalTxt(g('f-tarifa'), g('f-costo'), g('f-personas'), g('f-moneda'));
+  const lugar = g('f-lugar').trim() || g('f-title').trim(), rm = document.getElementById('row-maps'), fm = document.getElementById('f-maps');
+  if(rm) rm.hidden = !lugar;
+  if(fm && lugar) fm.href = 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(lugar);
+  const marcado = String(N.entero(g('f-dur')) || '');
+  document.querySelectorAll('#sheet [data-act="dur-set"]').forEach(x => { const on = x.dataset.v === marcado; x.classList.toggle('on', on); x.setAttribute('aria-pressed', on); });
+}
+document.addEventListener('input', e => { if(ui.sheet && ['f-dur', 'f-hora', 'f-costo', 'f-personas', 'f-moneda', 'f-lugar', 'f-title'].includes(e.target.id)) previewSheet(); });
+document.addEventListener('change', e => { if(ui.sheet && (['f-tarifa', 'f-hora', 'f-moneda'].includes(e.target.id) || e.target.name === 'f-cat')) previewSheet(); });
+
+// Bloque de cobros de una actividad confirmada: total, pagado, saldo y pagos registrados
+function bloqueCobros(it){
+  const tot = N.totalDe(it, st.personas.length);
+  if(!tot) return '';
+  const m = it.moneda || 'BRL', pag = N.pagadoDe(st, it.id), falta = N.saldoDe(st, it), pagos = N.pagosDe(st, it.id), quien = ui.sheet.pagador || cfg.persona;
+  return `<div><p class="fhead">Cobros</p><div class="cobro-box">
+    <div class="cobro-sum"><span>Total<b>${esc(monTxt(m, tot))}</b></span><span>Pagado<b>${esc(monTxt(m, pag))}</b></span><span class="${falta > 0 ? 'warn' : 'ok'}">Falta<b>${esc(monTxt(m, falta))}</b></span></div>
+    ${falta > 0 ? `<div class="acts"><button class="abtn ok" data-act="pagar-todo">${ico('check')}Pagué todo</button></div>
+    <div class="frow pago-row"><label class="flabel" for="f-pago">Adelanto</label><input class="fpick num" id="f-pago" inputmode="decimal" placeholder="0" aria-label="Monto del adelanto"><button class="pill blue" data-act="pagar-monto">Registrar</button></div>` : '<p class="ffoot" style="margin:0">Pagado completo.</p>'}
+    <p class="fhead" style="margin:6px 0 0">¿Quién pagó?</p>
+    <div class="rchips" role="group" aria-label="Quién pagó">${st.personas.map(p => `<button class="rchip ${p.nombre === quien ? 'on' : ''}" data-act="sheet-pagador" data-v="${esc(p.nombre)}" aria-pressed="${p.nombre === quien}">${av(p.nombre, 28)}${esc(corta(p.nombre))}</button>`).join('')}</div>
+    ${pagos.length ? `<ul class="pagos">${pagos.map(p => `<li><span>${esc(p.persona)} · ${esc(N.corto(p.fecha))}${p.nota ? ' · ' + esc(p.nota) : ''}</span><b>${esc(monTxt(p.moneda, p.monto))}</b><button class="link" data-act="pago-quitar" data-v="${esc(p.id)}" aria-label="Quitar pago de ${esc(monTxt(p.moneda, p.monto))}">Quitar</button></li>`).join('')}</ul>` : ''}
+  </div><p class="ffoot">Cada pago queda en Actividad con quién lo hizo y el día.</p></div>`;
+}
+
 function sheetItem(){
   const isNew = ui.sheet.type==='new', it0 = isNew ? null : buscar(ui.sheet.id);
   if(!isNew && !it0) return null;
   let fechaDef = ui.sheet.dia;
   if(fechaDef==='antes' || !fechaDef) fechaDef = hoy() < V().inicio ? hoy() : N.addDays(V().inicio,-1);
   if(fechaDef==='despues') fechaDef = N.addDays(V().fin,1);
-  const it = it0 || {titulo:'', nota:'', fecha:fechaDef, hora:'', fin:'', cat: ui.sheet.dia==='antes'?'tramite':'visita', estado:'pending', lugar:'', costo:'', moneda:'BRL', reserva:'', aviso:'none', aviso_fecha:''};
+  const it = it0 || {titulo:'', nota:'', fecha:fechaDef, hora:'', fin:'', duracion:'', cat: ui.sheet.dia==='antes'?'tramite':'visita', estado:'pending', lugar:'', costo:'', moneda:'BRL', tarifa:'', personas:'', reserva:'', aviso:'none', aviso_fecha:''};
+  const np = st.personas.length, dur = N.entero(it.duracion);
   const cats = Object.keys(CATC).map(k => `<label class="cat" style="--c:var(${CATC[k]})"><input type="radio" name="f-cat" value="${k}" ${k===it.cat?'checked':''}><span><i>${ico(k)}</i>${N.CAT_TXT[k]}</span></label>`).join('');
   const avisos = Object.keys(N.AVISO_TXT).map(k => `<option value="${k}" ${k===it.aviso?'selected':''}>${N.AVISO_TXT[k]}</option>`).join('');
-  const mapa = it.lugar || it.titulo ? `https://maps.apple.com/?q=${encodeURIComponent(it.lugar || (it.titulo + (enViaje(it.fecha) ? ', ' + (diaMeta(it.fecha).lugar||'') : '')))}` : '';
+  const mapa = it.lugar || it.titulo ? mapsUrl(it) : '';
+  const sinReserva = !!N.SIN_RESERVA[it.cat];
   let extra = '';
   if(!isNew){
     const s = it.estado, A = [], m = votosDe(it.id), mi = m[cfg.persona];
@@ -1837,6 +2015,7 @@ function sheetItem(){
       A.push(['pending','neutral','undo','Desconfirmar'],['discarded','no','xmark','Descartar']);
       const r_ = realizada(it) ? 'SI' : noRealizada(it) ? 'NO' : '';
       extra += `<div><p class="fhead">Seguimiento</p><div class="seg3" role="group" aria-label="¿Se realizó?">${[['','Por realizar','circle'],['SI','Realizada','checkc'],['NO','No se realizó','xcirc']].map(([v,l,i]) => `<button class="s3 s3-${v||'p'} ${r_===v?'on':''}" data-act="sheet-resultado" data-v="${v}" aria-pressed="${r_===v}">${ico(i)}<span>${l}</span></button>`).join('')}</div><p class="ffoot">Después de hacerla (o si no se pudo), márcalo aquí. Queda en Actividad con tu nombre y la hora.</p></div>`;
+      extra += bloqueCobros(it);
     }
     if(s==='discarded') A.push(['pending','blue','undo','Restaurar'],['archived','purple','archive','Archivar']);
     if(s==='archived') A.push(['pending','blue','undo','Restaurar'],['delete','no','trash','Eliminar']);
@@ -1856,25 +2035,40 @@ function sheetItem(){
       <div class="frow"><input class="fin" id="f-title" value="${esc(it.titulo)}" placeholder="Nombre de la actividad" aria-label="Nombre de la actividad" ${isNew?'autofocus':''}></div>
       <div class="frow"><textarea class="fin" id="f-note" rows="2" placeholder="Nota (opcional)" aria-label="Nota">${esc(it.nota)}</textarea></div>
     </div>
+    <div><p class="fhead">Categoría</p><div class="fgroup cats" role="radiogroup" aria-label="Categoría">${cats}</div></div>
     ${(() => { const rsel = isNew ? (ui.sheet.resp || []) : responsables(it);
       return `<div><p class="fhead">Responsable</p><div class="rchips" role="group" aria-label="Responsable">${st.personas.map(p => `<button class="rchip ${rsel.includes(p.nombre)?'on':''}" data-act="sheet-resp" data-v="${esc(p.nombre)}" aria-pressed="${rsel.includes(p.nombre)}">${av(p.nombre, 28)}${esc(corta(p.nombre))}</button>`).join('')}<button class="rchip plain ${rsel.length?'':'on'}" data-act="sheet-resp" data-v="" aria-pressed="${!rsel.length}">Sin asignar</button></div><p class="ffoot">Quién se encarga de reservar, pagar o recordarla. Puedes elegir a más de una persona.</p></div>`; })()}
     <div class="fgroup">
       <div class="frow"><label class="flabel" for="f-fecha">Fecha</label><input class="fpick" type="date" id="f-fecha" value="${esc(it.fecha)}"></div>
       <div class="frow"><label class="flabel" for="f-hora">Inicio</label><input class="fpick" type="time" id="f-hora" value="${esc(it.hora)}"></div>
-      <div class="frow"><label class="flabel" for="f-fin">Fin</label><input class="fpick" type="time" id="f-fin" value="${esc(it.fin)}"></div>
     </div>
-    <p class="ffoot" style="margin-top:-10px">Si es antes del Día 1, aparece como día previo (no se cuenta). Horas en hora local del lugar.</p>
+    <div><p class="fhead">Duración</p>
+      <div class="dur-chips" role="group" aria-label="Duración rápida">${[['', 'Sin duración']].concat(N.DUR_RAPIDAS.map(m => [String(m), N.duracionTxt(m)])).map(([v,l]) => `<button class="dchip ${String(dur||'')===v?'on':''}" data-act="dur-set" data-v="${v}" aria-pressed="${String(dur||'')===v}">${l}</button>`).join('')}</div>
+      <div class="fgroup" style="margin-top:8px">
+        <div class="frow"><label class="flabel" for="f-dur">Minutos</label><input class="fpick num" type="number" inputmode="numeric" min="1" step="5" id="f-dur" value="${dur||''}" placeholder="0" aria-label="Duración en minutos"></div>
+        <div class="frow"><span class="flabel">Hora de fin</span><span class="fin-prev" id="f-finprev">${esc(finTxt(it.hora, it.duracion))}</span></div>
+      </div>
+      <p class="ffoot">Basta con la hora de inicio y la duración: la hora de fin se calcula sola. En traslados la duración es opcional.</p>
+    </div>
+    <div class="fgroup">
+      <div class="frow"><input class="fin" id="f-lugar" value="${esc(it.lugar)}" placeholder="Lugar o dirección" aria-label="Lugar o dirección"></div>
+      <div class="frow" id="row-maps" ${mapa?'':'hidden'}><a class="maplink" id="f-maps" href="${esc(mapa)}" target="_blank" rel="noopener">${ico('map')}Abrir en Google Maps</a></div>
+    </div>
+    <div class="fgroup">
+      <div class="frow"><label class="flabel" for="f-tarifa">Tarifa</label><select class="fpick" id="f-tarifa" aria-label="Tarifa"><option value="" ${it.tarifa!=='grupo'?'selected':''}>Por persona</option><option value="grupo" ${it.tarifa==='grupo'?'selected':''}>Del grupo (total)</option></select></div>
+      <div class="frow"><label class="flabel" for="f-costo">Costo</label><input class="fpick num" id="f-costo" inputmode="decimal" value="${esc(it.costo)}" placeholder="0" aria-label="Costo"><select class="fpick" id="f-moneda" aria-label="Moneda">${['BRL','USD','PEN'].map(m => `<option ${m===(it.moneda||'BRL')?'selected':''}>${m}</option>`).join('')}</select></div>
+      <div class="frow" id="row-personas" ${it.tarifa==='grupo'?'hidden':''}><label class="flabel" for="f-personas">Personas</label><input class="fpick num" type="number" inputmode="numeric" min="1" step="1" id="f-personas" value="${esc(it.personas)}" placeholder="${np}" aria-label="Cantidad de personas"></div>
+    </div>
+    <p class="tot-prev" id="f-totprev">${esc(totalTxt(it.tarifa, it.costo, it.personas, it.moneda))}</p>
+    <p class="ffoot" style="margin-top:-6px">Por persona: el costo se multiplica por las personas (vacío = todos los viajeros). Del grupo: es el total que paga el grupo.</p>
+    <div class="fgroup" id="row-reserva" ${sinReserva?'hidden':''}>
+      <div class="frow"><input class="fin" id="f-reserva" value="${esc(it.reserva)}" placeholder="Código de reserva o enlace" aria-label="Código de reserva o enlace"></div>
+    </div>
     <div class="fgroup">
       <div class="frow"><label class="flabel" for="f-aviso">Aviso</label><select class="fpick" id="f-aviso">${avisos}</select></div>
       <div class="frow" id="row-avfecha" ${it.aviso==='custom'?'':'hidden'}><label class="flabel" for="f-avfecha">Avisar el</label><input class="fpick" type="datetime-local" id="f-avfecha" value="${esc(it.aviso_fecha)}"></div>
     </div>
     <p class="ffoot" id="f-avtxt" style="margin-top:-10px">${esc(textoAviso(it) || 'Sin aviso. Elige cuándo quieres que les llegue el recordatorio a todos.')}</p>
-    <div class="fgroup">
-      <div class="frow"><input class="fin" id="f-lugar" value="${esc(it.lugar)}" placeholder="Lugar o dirección" aria-label="Lugar o dirección">${mapa?`<a class="maplink" href="${esc(mapa)}" target="_blank" rel="noopener">${ico('map')}Mapas</a>`:''}</div>
-      <div class="frow"><label class="flabel" for="f-costo">Costo por persona</label><input class="fpick num" id="f-costo" inputmode="decimal" value="${esc(it.costo)}" placeholder="0"><select class="fpick" id="f-moneda" aria-label="Moneda">${['BRL','USD','PEN'].map(m => `<option ${m===(it.moneda||'BRL')?'selected':''}>${m}</option>`).join('')}</select></div>
-      <div class="frow"><input class="fin" id="f-reserva" value="${esc(it.reserva)}" placeholder="Código de reserva o enlace" aria-label="Código de reserva o enlace"></div>
-    </div>
-    <div><p class="fhead">Categoría</p><div class="fgroup cats" role="radiogroup" aria-label="Categoría">${cats}</div></div>
     ${isNew?`<p class="ffoot" style="margin-top:0">Entrará como por decidir con tu voto a favor${st.personas.length>1?'. Se confirma cuando los demás también voten sí':''}.</p>`:''}
     ${extra}
   </div>`;
@@ -2210,8 +2404,8 @@ function renderSheet(){
 function errSheet(msg, focusId){ const e = $('#f-err'); if(e){ e.textContent = msg; e.hidden = false; } if(focusId){ const f = $('#'+focusId); if(f){ f.classList.add('invalid'); f.focus(); } } }
 function leerForm(){
   const g = id => ($('#'+id) || {}).value || '';
-  return {titulo:g('f-title').trim(), nota:g('f-note').trim(), fecha:g('f-fecha'), hora:g('f-hora'), fin:g('f-fin'), lugar:g('f-lugar').trim(),
-    costo:g('f-costo').trim().replace(',','.'), moneda:g('f-moneda')||'BRL', reserva:g('f-reserva').trim(), aviso:g('f-aviso')||'none',
+  return {titulo:g('f-title').trim(), nota:g('f-note').trim(), fecha:g('f-fecha'), hora:g('f-hora'), duracion:g('f-dur').trim(), lugar:g('f-lugar').trim(),
+    costo:g('f-costo').trim().replace(',','.'), moneda:g('f-moneda')||'BRL', tarifa:g('f-tarifa'), personas:g('f-personas').trim(), reserva:g('f-reserva').trim(), aviso:g('f-aviso')||'none',
     aviso_fecha: g('f-aviso')==='custom' ? g('f-avfecha') : '', cat:(document.querySelector('input[name="f-cat"]:checked')||{}).value || 'visita'};
 }
 async function guardarForm(){
@@ -2219,6 +2413,8 @@ async function guardarForm(){
   if(!v.titulo){ errSheet('Escribe un nombre para la actividad.', 'f-title'); return null; }
   if(!/^\d{4}-\d{2}-\d{2}$/.test(v.fecha)){ errSheet('Elige una fecha.', 'f-fecha'); return null; }
   if(v.costo && !isFinite(+v.costo)){ errSheet('El costo debe ser un número, por ejemplo 44 o 12.50.', 'f-costo'); return null; }
+  if(v.duracion && !N.entero(v.duracion)){ errSheet('La duración son minutos, por ejemplo 60.', 'f-dur'); return null; }
+  if(v.personas && !N.entero(v.personas)){ errSheet('Las personas deben ser un número mayor que cero.', 'f-personas'); return null; }
   if(v.aviso==='custom' && !v.aviso_fecha){ errSheet('Elige cuándo avisar o cambia el tipo de aviso.', 'f-avfecha'); return null; }
   const isNew = ui.sheet.type==='new';
   const it0 = isNew ? null : buscar(ui.sheet.id);
@@ -2317,6 +2513,11 @@ document.addEventListener('click', async e => {
     case 'rate-day': { const me = miEval('dia', dia), n = me.estrellas===+v ? 0 : +v; const nota = (($('#evnote-'+dia)||{}).value) ?? me.nota; act({op:'evaluar', tipo:'dia', ref:dia, estrellas:n, nota}); break; }
     case 'f-star': ui.sheet.rating = ui.sheet.rating===+v ? 0 : +v; document.querySelectorAll('#f-stars .star').forEach((s,k) => { s.classList.toggle('on', k<ui.sheet.rating); s.setAttribute('aria-pressed', k<ui.sheet.rating); }); break;
     case 'filtro': ui.filtro = v; render(); break;
+    case 'dur-set': { const el = document.getElementById('f-dur'); if(el) el.value = v; previewSheet(); break; }
+    case 'sheet-pagador': { if(ui.sheet) ui.sheet.pagador = v; renderSheet(); break; }
+    case 'pagar-todo': { const sid = ui.sheet.id, it = buscar(sid); if(!it) break; const m = N.saldoDe(st, it); if(m > 0) await act({op:'pagar', id:sid, monto:m, persona: ui.sheet.pagador || cfg.persona}, {msg:'Pago registrado. Quedó pagado completo'}); if(ui.sheet) renderSheet(); break; }
+    case 'pagar-monto': { const sid = ui.sheet.id, el = document.getElementById('f-pago'), m = el ? el.value : ''; if(!(+String(m).replace(',','.') > 0)){ errSheet('Escribe cuánto pagaste.', 'f-pago'); break; } await act({op:'pagar', id:sid, monto:m, persona: ui.sheet.pagador || cfg.persona}, {msg:'Pago registrado'}); if(ui.sheet) renderSheet(); break; }
+    case 'pago-quitar': { const sid = ui.sheet.id; await act({op:'quitar_pago', id:sid, pago:v}, {msg:'Pago quitado'}); if(ui.sheet) renderSheet(); break; }
     case 'ver': { const sx = $('#kb') ? $('#kb').scrollLeft : 0; ui.ver = v; render(); if($('#kb')) $('#kb').scrollLeft = sx; break; }
     case 'resultado': ciclarResultado(id); break;
     case 'sheet-close': closeSheet(); break;
@@ -2388,6 +2589,7 @@ document.addEventListener('change', e => {
 });
 document.addEventListener('keydown', e => {
   if(e.key==='Escape' && ui.sheet) closeSheet();
+  if(e.key==='Enter' && e.target.id==='f-pago'){ e.preventDefault(); const b = document.querySelector('[data-act="pagar-monto"]'); if(b) b.click(); return; }
   if(e.key==='Enter' && ui.sheet && e.target.tagName==='INPUT' && e.target.type!=='checkbox'){
     e.preventDefault(); const s = document.querySelector('#sheet [data-act="sheet-save"],#sheet [data-act="day-save"],#sheet [data-act="fechas-save"],#sheet [data-act="connect"]'); if(s) s.click();
   }
